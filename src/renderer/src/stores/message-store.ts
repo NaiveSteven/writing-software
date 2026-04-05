@@ -16,6 +16,10 @@ interface MessageState {
   addMessage: (content: string, sourceLang: string, inputType: 'text' | 'voice') => Promise<Message>
   /** 更新消息的翻译结果 */
   updateTranslation: (id: number, translatedText: string, targetLang: LanguageCode) => Promise<void>
+  /** 删除消息 */
+  deleteMessage: (id: number) => Promise<void>
+  /** 更新消息原文 */
+  updateContent: (id: number, content: string) => Promise<void>
 }
 
 /**
@@ -52,6 +56,18 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         ? { ...msg, translatedText, targetLang, updatedAt: new Date().toISOString() }
         : msg
     )
+    set({ messages })
+  },
+
+  deleteMessage: async (id) => {
+    await window.api.deleteMessage(id)
+    set({ messages: get().messages.filter((msg) => msg.id !== id) })
+  },
+
+  updateContent: async (id, content) => {
+    const record = await window.api.updateContent(id, content)
+    const updated = mapDbRecord(record as Record<string, unknown>)
+    const messages = get().messages.map((msg) => (msg.id === id ? updated : msg))
     set({ messages })
   }
 }))

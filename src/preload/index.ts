@@ -37,6 +37,12 @@ const api = {
   updateTranslation: (params: UpdateTranslationParams) =>
     ipcRenderer.invoke('message:updateTranslation', params),
 
+  deleteMessage: (id: number) =>
+    ipcRenderer.invoke('message:delete', id),
+
+  updateContent: (id: number, content: string) =>
+    ipcRenderer.invoke('message:updateContent', id, content),
+
   /* --- 翻译 --- */
   translateText: (text: string, sourceLang: string, targetLang: string) =>
     ipcRenderer.invoke('translate:text', text, sourceLang, targetLang),

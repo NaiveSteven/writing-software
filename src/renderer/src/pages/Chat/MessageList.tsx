@@ -12,6 +12,10 @@ interface MessageListProps {
   showTranslation: boolean
   /** 重新翻译回调 */
   onRetranslate: (id: number, targetLang: LanguageCode) => void
+  /** 点击消息打开详情 */
+  onMessageClick?: (message: Message) => void
+  /** 右键菜单回调 */
+  onMessageContextMenu?: (e: React.MouseEvent, message: Message) => void
 }
 
 /**
@@ -21,7 +25,9 @@ interface MessageListProps {
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
   showTranslation,
-  onRetranslate
+  onRetranslate,
+  onMessageClick,
+  onMessageContextMenu
 }) => {
   const { t } = useTranslation()
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -49,6 +55,8 @@ export const MessageList: React.FC<MessageListProps> = ({
           message={msg}
           showTranslation={showTranslation}
           onRetranslate={onRetranslate}
+          onClick={onMessageClick}
+          onContextMenu={onMessageContextMenu}
         />
       ))}
       {/* 滚动锚点 */}

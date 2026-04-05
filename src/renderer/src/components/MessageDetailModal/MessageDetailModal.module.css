@@ -1,0 +1,231 @@
+/* ============================================
+   消息详情弹窗
+   左右分栏：原文 | 译文
+   液态玻璃风格 + 进退场动画
+   ============================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- 弹窗主体 --- */
+.modal {
+  width: 720px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg-active);
+  backdrop-filter: blur(32px) saturate(1.8);
+  -webkit-backdrop-filter: blur(32px) saturate(1.8);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow-lg);
+  overflow: hidden;
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* --- 顶部栏 --- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--color-divider);
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-copy-bg);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.closeBtn:hover {
+  background: var(--color-copy-bg-hover);
+  color: var(--color-text);
+}
+
+/* --- 左右分栏 --- */
+.body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* 共享面板样式 */
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 20px;
+}
+
+.panelLeft {
+  border-right: 1px solid var(--color-divider);
+}
+
+/* 面板标题行 */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.panelLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.originalLabel {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.translationLabel {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.langInfo {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* 内容区域 */
+.textArea {
+  flex: 1;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.7;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  overflow-y: auto;
+  transition: border-color var(--transition-fast);
+  min-height: 160px;
+}
+
+.textArea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* 只读的译文展示 */
+.translationText {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-y: auto;
+  min-height: 160px;
+  font-style: italic;
+}
+
+.emptyTranslation {
+  color: var(--color-text-tertiary);
+  font-style: normal;
+}
+
+/* --- 底部操作栏 --- */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--color-divider);
+  flex-shrink: 0;
+}
+
+.footerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.translateLabel {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.saveHint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-right: 8px;
+}

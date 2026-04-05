@@ -9,6 +9,8 @@
     "voiceStart": "开始录音",
     "voiceStop": "停止录音",
     "voiceHint": "按住说话，松开识别",
+    "voiceEmpty": "没有识别到内容，再试一次",
+    "voiceError": "语音识别失败，请重试",
     "shortcutHint": "快捷键: {{shortcut}}",
     "emptyState": "说点什么吧，我帮你翻译",
     "detected": "检测到: {{lang}}",
@@ -16,14 +18,25 @@
     "translation": "译文",
     "retranslate": "重新翻译",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "transcribing": "语音识别中..."
   },
   "translate": {
-    "enable": "开启翻译",
-    "disable": "关闭翻译",
+    "on": "翻译已开启",
+    "off": "翻译已关闭",
     "targetLang": "翻译为",
     "translating": "翻译中...",
     "noModel": "需要下载模型"
+  },
+  "context": {
+    "detail": "查看详情",
+    "delete": "删除"
+  },
+  "detail": {
+    "title": "消息详情",
+    "noTranslation": "暂无翻译，选择语言后点重新翻译",
+    "save": "保存修改",
+    "unsaved": "内容已修改"
   },
   "language": {
     "zh": "中文",

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './Chat.module.css'
-import { GlassButton } from '../../components/GlassButton'
+import { ToggleSwitch } from '../../components/ToggleSwitch'
 import { LanguageSelector } from '../../components/LanguageSelector'
 import type { LanguageCode } from '../../types/language'
 
@@ -19,7 +19,7 @@ interface TranslationPanelProps {
 
 /**
  * 翻译控制面板
- * 翻译开关 + 目标语言选择
+ * iOS 风格开关 + 目标语言选择
  */
 export const TranslationPanel: React.FC<TranslationPanelProps> = ({
   enabled,
@@ -31,14 +31,13 @@ export const TranslationPanel: React.FC<TranslationPanelProps> = ({
 
   return (
     <div className={styles.translationPanel}>
-      {/* 翻译开关 */}
-      <GlassButton
-        variant={enabled ? 'primary' : 'default'}
-        size="sm"
-        onClick={onToggle}
-      >
-        {enabled ? t('translate.disable') : t('translate.enable')}
-      </GlassButton>
+      {/* iOS 风格翻译开关 */}
+      <ToggleSwitch
+        checked={enabled}
+        onChange={onToggle}
+        labelOn={t('translate.on')}
+        labelOff={t('translate.off')}
+      />
 
       {/* 目标语言选择（仅翻译开启时显示） */}
       {enabled && (

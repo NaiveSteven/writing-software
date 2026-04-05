@@ -80,12 +80,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </GlassButton>
       </div>
 
-      {/* 快捷键提示 */}
-      <p className={styles.hint}>
-        {t('chat.shortcutHint', {
-          shortcut: navigator.platform.includes('Mac') ? '⌘ + Tab' : 'Ctrl + Tab'
-        })}
-      </p>
+      {/* 快捷键提示 / 识别状态 */}
+      {disabled ? (
+        <p className={`${styles.hint} ${styles.transcribingHint}`}>
+          {t('chat.transcribing')}
+        </p>
+      ) : (
+        <p className={styles.hint}>
+          {t('chat.shortcutHint', {
+            shortcut: navigator.platform.includes('Mac') ? '⌘ + Tab' : 'Ctrl + Tab'
+          })}
+        </p>
+      )}
     </div>
   )
 }

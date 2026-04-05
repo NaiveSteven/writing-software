@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { DatabaseService } from '../services/database'
 import type { CreateMessageParams, UpdateTranslationParams } from '../services/database'
 import { TranslateService } from '../services/translate-service'
+import { WhisperService } from '../services/whisper-service'
 import { ModelDownloader } from '../services/model-downloader'
 
 /**
@@ -13,6 +14,8 @@ export const IPC_CHANNELS = {
   MESSAGE_CREATE: 'message:create',
   MESSAGE_GET_ALL: 'message:getAll',
   MESSAGE_UPDATE_TRANSLATION: 'message:updateTranslation',
+  MESSAGE_DELETE: 'message:delete',
+  MESSAGE_UPDATE_CONTENT: 'message:updateContent',
 
   /* 翻译相关 */
   TRANSLATE_TEXT: 'translate:text',
@@ -30,6 +33,7 @@ export const IPC_CHANNELS = {
 export function registerIpcHandlers(): void {
   const db = DatabaseService.getInstance()
   const translator = TranslateService.getInstance()
+  const whisper = WhisperService.getInstance()
   const modelDownloader = new ModelDownloader()
 
   /* --- 消息 CRUD --- */
@@ -55,6 +59,21 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  /** 删除消息 */
+  ipcMain.handle(IPC_CHANNELS.MESSAGE_DELETE, async (_event, id: number) => {
+    await db.ready()
+    return db.deleteMessage(id)
+  })
+
+  /** 更新消息原文 */
+  ipcMain.handle(
+    IPC_CHANNELS.MESSAGE_UPDATE_CONTENT,
+    async (_event, id: number, content: string) => {
+      await db.ready()
+      return db.updateContent(id, content)
+    }
+  )
+
   /* --- 翻译 --- */
 
   /** 翻译文本 */
@@ -62,6 +81,16 @@ export function registerIpcHandlers(): void {
     IPC_CHANNELS.TRANSLATE_TEXT,
     async (_event, text: string, sourceLang: string, targetLang: string) => {
       return translator.translate(text, sourceLang, targetLang)
+    }
+  )
+
+  /* --- 语音识别 --- */
+
+  /** 转录语音 */
+  ipcMain.handle(
+    IPC_CHANNELS.WHISPER_TRANSCRIBE,
+    async (_event, audioData: Float32Array) => {
+      return whisper.transcribe(audioData)
     }
   )
 

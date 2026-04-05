@@ -9,6 +9,8 @@
     "voiceStart": "Start Recording",
     "voiceStop": "Stop Recording",
     "voiceHint": "Hold to speak, release to recognize",
+    "voiceEmpty": "Nothing recognized, try again",
+    "voiceError": "Voice recognition failed, retry",
     "shortcutHint": "Shortcut: {{shortcut}}",
     "emptyState": "Say something, I'll translate it",
     "detected": "Detected: {{lang}}",
@@ -16,14 +18,25 @@
     "translation": "Translation",
     "retranslate": "Re-translate",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "transcribing": "Recognizing..."
   },
   "translate": {
-    "enable": "Enable Translation",
-    "disable": "Disable Translation",
+    "on": "Translation On",
+    "off": "Translation Off",
     "targetLang": "Translate to",
     "translating": "Translating...",
     "noModel": "Model download needed"
+  },
+  "context": {
+    "detail": "View Detail",
+    "delete": "Delete"
+  },
+  "detail": {
+    "title": "Message Detail",
+    "noTranslation": "No translation yet, pick a language",
+    "save": "Save",
+    "unsaved": "Unsaved changes"
   },
   "language": {
     "zh": "Chinese",

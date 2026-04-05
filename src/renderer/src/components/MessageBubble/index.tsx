@@ -13,6 +13,10 @@ interface MessageBubbleProps {
   onRetranslate?: (id: number, targetLang: LanguageCode) => void
   /** 是否显示翻译区域 */
   showTranslation?: boolean
+  /** 点击消息打开详情 */
+  onClick?: (message: Message) => void
+  /** 右键菜单回调 */
+  onContextMenu?: (e: React.MouseEvent, message: Message) => void
 }
 
 /**
@@ -23,7 +27,9 @@ interface MessageBubbleProps {
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   onRetranslate,
-  showTranslation = true
+  showTranslation = true,
+  onClick,
+  onContextMenu
 }) => {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -46,8 +52,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   }
 
   return (
-    <div className={styles.bubble}>
-      {/* 原文区域 */}
+    <div
+      className={`${styles.bubble} ${onClick ? styles.clickable : ''}`}
+      onClick={() => onClick?.(message)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextMenu?.(e, message)
+      }}
+    >      {/* 原文区域 */}
       <div className={styles.original}>
         <div className={styles.header}>
           <span className={styles.label}>{t('chat.original')}</span>

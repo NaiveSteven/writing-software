@@ -163,7 +163,7 @@ body::after {
   -webkit-app-region: no-drag;
 }
 
-/* --- 滚动条样式 --- */
+/* --- 滚动条样式：不滚动时自动隐藏 --- */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -173,10 +173,16 @@ body::after {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-scrollbar);
+  background: transparent;
   border-radius: 3px;
+  transition: background 0.3s;
 }
 
-::-webkit-scrollbar-thumb:hover {
+/* 鼠标悬停在可滚动区域时显示滚动条 */
+*:hover::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar);
+}
+
+*:hover::-webkit-scrollbar-thumb:hover {
   background: var(--color-scrollbar-hover);
 }

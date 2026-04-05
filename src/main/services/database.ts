@@ -114,13 +114,19 @@ export class DatabaseService {
       `INSERT INTO messages (content, source_lang, input_type) VALUES (?, ?, ?)`,
       [params.content, params.sourceLang, params.inputType]
     )
-    this.save()
 
-    /* 获取刚插入的记录 */
+    /* 先查询再持久化，避免 save() 中的 export() 重置 last_insert_rowid */
     const result = this.db!.exec(
       `SELECT * FROM messages WHERE id = last_insert_rowid()`
     )
-    return this.rowToRecord(result[0].columns, result[0].values[0])
+
+    if (result.length === 0 || result[0].values.length === 0) {
+      throw new Error('Failed to retrieve inserted message')
+    }
+
+    const record = this.rowToRecord(result[0].columns, result[0].values[0])
+    this.save()
+    return record
   }
 
   /** 根据 ID 查询消息 */
@@ -161,6 +167,23 @@ export class DatabaseService {
       record[col] = values[i]
     })
     return record as unknown as MessageRecord
+  }
+
+  /** 删除消息记录 */
+  deleteMessage(id: number): boolean {
+    this.db!.run(`DELETE FROM messages WHERE id = ?`, [id])
+    this.save()
+    return true
+  }
+
+  /** 更新消息原文内容 */
+  updateContent(id: number, content: string): MessageRecord | undefined {
+    this.db!.run(
+      `UPDATE messages SET content = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+      [content, id]
+    )
+    this.save()
+    return this.getMessageById(id)
   }
 
   /** 关闭数据库连接 */

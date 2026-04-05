@@ -7,7 +7,11 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest run --project ui",
+    "test:node": "vitest run --project node"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +25,9 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -28,13 +35,16 @@
     "autoprefixer": "^10.4.27",
     "electron": "^41.1.1",
     "electron-vite": "^5.0.0",
+    "jsdom": "^29.0.1",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
     "@electron-toolkit/utils": "^4.0.0",
+    "@huggingface/transformers": "^4.0.1",
     "i18next": "^26.0.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
