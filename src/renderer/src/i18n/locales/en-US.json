@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Aura Marker Studio"
+  },
+  "chat": {
+    "title": "Translation Chat",
+    "inputPlaceholder": "Type something, or tap the mic to speak...",
+    "send": "Send",
+    "voiceStart": "Start Recording",
+    "voiceStop": "Stop Recording",
+    "voiceHint": "Hold to speak, release to recognize",
+    "shortcutHint": "Shortcut: {{shortcut}}",
+    "emptyState": "Say something, I'll translate it",
+    "detected": "Detected: {{lang}}",
+    "original": "Original",
+    "translation": "Translation",
+    "retranslate": "Re-translate",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "translate": {
+    "enable": "Enable Translation",
+    "disable": "Disable Translation",
+    "targetLang": "Translate to",
+    "translating": "Translating...",
+    "noModel": "Model download needed"
+  },
+  "language": {
+    "zh": "Chinese",
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "fr": "French",
+    "de": "German",
+    "ru": "Russian",
+    "es": "Spanish",
+    "it": "Italian"
+  },
+  "model": {
+    "downloading": "Downloading model...",
+    "progress": "{{percent}}%",
+    "ready": "Model ready",
+    "notDownloaded": "Model not downloaded",
+    "download": "Download Model",
+    "speechModel": "Speech Recognition Model",
+    "translateModel": "Translation Model"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme"
+  }
+}

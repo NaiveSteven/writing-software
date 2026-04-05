@@ -1,0 +1,120 @@
+/* ============================================
+   Chat 页面布局样式
+   ============================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- 标题栏 --- */
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px 8px 80px; /* 左侧留出 macOS 红绿灯空间 */
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: -0.3px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.langToggle {
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.langToggle:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* --- 翻译控制面板 --- */
+.translationPanel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px;
+  flex-shrink: 0;
+}
+
+.langSelect {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.langLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* --- 消息列表区域 --- */
+.main {
+  flex: 1;
+  overflow: hidden;
+  padding: 0 20px;
+}
+
+.messageList {
+  height: 100%;
+  overflow-y: auto;
+  padding: 8px 0 16px;
+}
+
+/* --- 空状态 --- */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  opacity: 0.6;
+}
+
+.emptyText {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- 输入区域 --- */
+.inputArea {
+  padding: 12px 20px 20px;
+  flex-shrink: 0;
+}
+
+.inputRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.hint {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}

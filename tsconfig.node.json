@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./out/main",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "paths": {
+      "@main/*": ["./src/main/*"]
+    }
+  },
+  "include": ["src/main/**/*", "src/preload/**/*"]
+}

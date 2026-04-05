@@ -1,0 +1,72 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  color: var(--color-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+  -webkit-app-region: no-drag;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  transform: translateY(-0.5px);
+}
+
+.btn:active:not(:disabled) {
+  background: var(--glass-bg-active);
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- 尺寸 --- */
+.sm {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.md {
+  padding: 8px 18px;
+  font-size: 14px;
+}
+
+.lg {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: var(--radius-lg);
+}
+
+/* --- 变体 --- */
+.primary {
+  background: rgba(0, 122, 255, 0.2);
+  border-color: rgba(0, 122, 255, 0.3);
+  color: var(--color-primary);
+}
+
+.primary:hover:not(:disabled) {
+  background: rgba(0, 122, 255, 0.35);
+}
+
+.danger {
+  background: rgba(255, 59, 48, 0.15);
+  border-color: rgba(255, 59, 48, 0.25);
+  color: var(--color-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.3);
+}

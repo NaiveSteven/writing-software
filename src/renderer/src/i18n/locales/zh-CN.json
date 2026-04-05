@@ -1,0 +1,53 @@
+{
+  "app": {
+    "name": "Aura Marker Studio"
+  },
+  "chat": {
+    "title": "对话翻译",
+    "inputPlaceholder": "输入文字，或按语音按钮说话...",
+    "send": "发送",
+    "voiceStart": "开始录音",
+    "voiceStop": "停止录音",
+    "voiceHint": "按住说话，松开识别",
+    "shortcutHint": "快捷键: {{shortcut}}",
+    "emptyState": "说点什么吧，我帮你翻译",
+    "detected": "检测到: {{lang}}",
+    "original": "原文",
+    "translation": "译文",
+    "retranslate": "重新翻译",
+    "copy": "复制",
+    "copied": "已复制"
+  },
+  "translate": {
+    "enable": "开启翻译",
+    "disable": "关闭翻译",
+    "targetLang": "翻译为",
+    "translating": "翻译中...",
+    "noModel": "需要下载模型"
+  },
+  "language": {
+    "zh": "中文",
+    "en": "英文",
+    "ja": "日文",
+    "ko": "韩文",
+    "fr": "法文",
+    "de": "德文",
+    "ru": "俄文",
+    "es": "西班牙文",
+    "it": "意大利文"
+  },
+  "model": {
+    "downloading": "正在下载模型...",
+    "progress": "{{percent}}%",
+    "ready": "模型已就绪",
+    "notDownloaded": "模型未下载",
+    "download": "下载模型",
+    "speechModel": "语音识别模型",
+    "translateModel": "翻译模型"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "界面语言",
+    "theme": "主题"
+  }
+}
