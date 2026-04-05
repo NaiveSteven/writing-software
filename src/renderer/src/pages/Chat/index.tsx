@@ -19,8 +19,10 @@ export const ChatPage: React.FC = () => {
 
   /* 状态管理 */
   const { messages, loadMessages, addMessage, updateTranslation } = useMessageStore()
-  const { translateEnabled, targetLang, uiLang, toggleTranslate, setTargetLang, setUiLang } =
-    useSettingStore()
+  const {
+    translateEnabled, targetLang, uiLang, theme,
+    toggleTranslate, setTargetLang, setUiLang, toggleTheme
+  } = useSettingStore()
 
   /* 启动时加载历史消息 */
   useEffect(() => {
@@ -114,6 +116,15 @@ export const ChatPage: React.FC = () => {
       <header className={`${styles.titleBar} drag-region`}>
         <h1 className={styles.title}>{t('app.name')}</h1>
         <div className={`${styles.headerActions} no-drag`}>
+          {/* 主题切换 */}
+          <button
+            type="button"
+            className={styles.langToggle}
+            onClick={toggleTheme}
+            title={t(theme === 'light' ? 'settings.themeDark' : 'settings.themeLight')}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
           {/* 界面语言切换 */}
           <button
             type="button"

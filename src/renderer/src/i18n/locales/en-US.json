@@ -48,6 +48,8 @@
   "settings": {
     "title": "Settings",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "themeLight": "Light Mode",
+    "themeDark": "Dark Mode"
   }
 }

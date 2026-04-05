@@ -30,7 +30,7 @@
   min-width: 44px;
   padding: 0 14px;
   border-radius: var(--radius-xl);
-  background: rgba(255, 59, 48, 0.15);
+  background: var(--color-danger-light);
   border-color: rgba(255, 59, 48, 0.3);
   color: var(--color-danger);
 }

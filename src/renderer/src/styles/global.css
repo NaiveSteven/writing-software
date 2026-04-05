@@ -3,9 +3,12 @@
 /* ============================================
    液态玻璃 (Liquid Glass) 设计系统
    灵感来自 Apple 的设计语言
+   支持亮色 / 暗色主题切换
    ============================================ */
 
-:root {
+/* ---- 亮色主题 (默认) ---- */
+:root,
+[data-theme="light"] {
   /* --- 玻璃效果参数 --- */
   --glass-blur: 24px;
   --glass-saturate: 1.8;
@@ -20,13 +23,33 @@
   --color-primary: #007AFF;
   --color-primary-light: rgba(0, 122, 255, 0.12);
   --color-success: #34C759;
+  --color-success-light: rgba(52, 199, 89, 0.1);
   --color-warning: #FF9500;
   --color-danger: #FF3B30;
+  --color-danger-light: rgba(255, 59, 48, 0.15);
+
+  /* 文本 */
   --color-text: #1d1d1f;
   --color-text-secondary: #6e6e73;
   --color-text-tertiary: #aeaeb2;
-  --color-bg: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  --color-text-on-bg: rgba(29, 29, 31, 0.88);
+
+  /* 背景 */
+  --color-bg: linear-gradient(145deg, #C8DCE8 0%, #D6DDE6 35%, #E8E0D4 65%, #F2EDE8 100%);
   --color-bg-solid: #f5f5f7;
+
+  /* 分隔线 & 面板 */
+  --color-divider: rgba(0, 0, 0, 0.06);
+  --color-divider-dashed: rgba(0, 0, 0, 0.08);
+  --color-copy-bg: rgba(0, 0, 0, 0.06);
+  --color-copy-bg-hover: rgba(0, 0, 0, 0.12);
+
+  /* 滚动条 */
+  --color-scrollbar: rgba(0, 0, 0, 0.15);
+  --color-scrollbar-hover: rgba(0, 0, 0, 0.25);
+
+  /* 噪点纹理透明度 */
+  --noise-opacity: 0.025;
 
   /* --- 圆角 --- */
   --radius-sm: 8px;
@@ -45,6 +68,51 @@
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
+}
+
+/* ---- 暗色主题 ---- */
+[data-theme="dark"] {
+  /* --- 玻璃效果参数 --- */
+  --glass-blur: 24px;
+  --glass-saturate: 1.6;
+  --glass-bg: rgba(30, 30, 35, 0.55);
+  --glass-bg-hover: rgba(42, 42, 50, 0.68);
+  --glass-bg-active: rgba(52, 52, 60, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+  --glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.48);
+
+  /* --- 颜色系统 --- */
+  --color-primary: #0A84FF;
+  --color-primary-light: rgba(10, 132, 255, 0.18);
+  --color-success: #30D158;
+  --color-success-light: rgba(48, 209, 88, 0.15);
+  --color-warning: #FF9F0A;
+  --color-danger: #FF453A;
+  --color-danger-light: rgba(255, 69, 58, 0.18);
+
+  /* 文本 */
+  --color-text: #f5f5f7;
+  --color-text-secondary: #a1a1a6;
+  --color-text-tertiary: #636366;
+  --color-text-on-bg: rgba(245, 245, 247, 0.9);
+
+  /* 背景 */
+  --color-bg: linear-gradient(145deg, #0D1117 0%, #141A22 40%, #1A1F28 100%);
+  --color-bg-solid: #1c1c1e;
+
+  /* 分隔线 & 面板 */
+  --color-divider: rgba(255, 255, 255, 0.08);
+  --color-divider-dashed: rgba(255, 255, 255, 0.06);
+  --color-copy-bg: rgba(255, 255, 255, 0.06);
+  --color-copy-bg-hover: rgba(255, 255, 255, 0.12);
+
+  /* 滚动条 */
+  --color-scrollbar: rgba(255, 255, 255, 0.12);
+  --color-scrollbar-hover: rgba(255, 255, 255, 0.22);
+
+  /* 噪点纹理透明度 */
+  --noise-opacity: 0.04;
 }
 
 /* --- 基础重置 --- */
@@ -67,6 +135,23 @@ html, body, #root {
 body {
   background: var(--color-bg);
   background-attachment: fixed;
+  position: relative;
+}
+
+/* --- 噪点纹理覆盖层 (满足"不能纯平"要求) --- */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: var(--noise-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 /* --- macOS 标题栏拖拽区域 --- */
@@ -88,10 +173,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--color-scrollbar);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--color-scrollbar-hover);
 }

@@ -21,7 +21,7 @@
 .title {
   font-size: 16px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-text-on-bg);
   letter-spacing: -0.3px;
 }
 
@@ -33,18 +33,21 @@
 
 .langToggle {
   padding: 4px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+  -webkit-app-region: no-drag;
 }
 
 .langToggle:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg-hover);
 }
 
 /* --- 翻译控制面板 --- */
@@ -64,7 +67,7 @@
 
 .langLabel {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-secondary);
 }
 
 /* --- 消息列表区域 --- */
@@ -97,7 +100,7 @@
 
 .emptyText {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
 }
 
 /* --- 输入区域 --- */
@@ -116,5 +119,5 @@
   margin-top: 6px;
   text-align: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-tertiary);
 }
