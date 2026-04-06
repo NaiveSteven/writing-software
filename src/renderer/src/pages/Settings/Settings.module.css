@@ -1,0 +1,188 @@
+/* ============================================
+   设置页面样式 — 液态玻璃风格
+   与 Chat 页面统一标题栏设计
+   ============================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- 标题栏（与 Chat 页统一，避让 macOS 红绿灯） --- */
+.titleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px 8px 80px;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-on-bg);
+  letter-spacing: -0.3px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backBtn {
+  padding: 4px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.backBtn:hover {
+  background: var(--glass-bg-hover);
+}
+
+/* --- 内容区域 --- */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 20px 24px;
+}
+
+/* --- 区块 --- */
+.section {
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+
+.sectionHint {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+/* --- 模型行（紧凑单行布局） --- */
+.modelRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--glass-shadow);
+}
+
+.modelMeta {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.modelName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modelSize {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* --- 状态徽章 --- */
+.badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.installed {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.notInstalled {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+/* --- 操作按钮 --- */
+.actionBtn {
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primaryBtn {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.dangerBtn {
+  background: var(--color-copy-bg);
+  color: var(--color-text-secondary);
+}
+
+.dangerBtn:hover:not(:disabled) {
+  background: var(--color-copy-bg-hover);
+  color: var(--color-danger);
+}
+
+/* --- 模型网格 --- */
+.modelGrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.loading {
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  padding: 16px 0;
+}

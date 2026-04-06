@@ -11,6 +11,9 @@
     "voiceHint": "按住说话，松开识别",
     "voiceEmpty": "没有识别到内容，再试一次",
     "voiceError": "语音识别失败，请重试",
+    "voiceModelError": "语音模型加载失败，检查网络",
+    "modelLoadHint": "语音模型首次加载中，稍后再试",
+    "translateFailed": "翻译失败，请重试",
     "shortcutHint": "快捷键: {{shortcut}}",
     "emptyState": "说点什么吧，我帮你翻译",
     "detected": "检测到: {{lang}}",
@@ -58,11 +61,42 @@
     "speechModel": "语音识别模型",
     "translateModel": "翻译模型"
   },
+  "modelDialog": {
+    "needDownload": "需要下载模型",
+    "confirmDesc": "翻译需要模型 {{model}}，是否立即下载？",
+    "cancel": "取消",
+    "startDownload": "开始下载",
+    "downloading": "正在下载模型",
+    "initializing": "正在初始化模型...",
+    "success": "下载完成",
+    "readyToUse": "模型已就绪，可以使用了",
+    "ok": "好的",
+    "failed": "下载失败",
+    "unknownError": "未知错误，请重试",
+    "retry": "重试",
+    "close": "关闭",
+    "confirmUninstall": "确认卸载模型",
+    "uninstallDesc": "确定要卸载模型 {{model}} 吗？",
+    "confirmUninstallBtn": "确认卸载",
+    "uninstalling": "正在卸载模型",
+    "pleaseWait": "请稍候...",
+    "uninstallSuccess": "卸载完成",
+    "uninstallDone": "模型已成功卸载",
+    "uninstallFailed": "卸载失败"
+  },
   "settings": {
     "title": "设置",
+    "back": "返回",
     "language": "界面语言",
     "theme": "主题",
     "themeLight": "浅色模式",
-    "themeDark": "深色模式"
+    "themeDark": "深色模式",
+    "installed": "已安装",
+    "notInstalled": "未安装",
+    "install": "安装",
+    "uninstall": "卸载",
+    "loading": "检查模型状态...",
+    "speechModelHint": "语音识别用，录音后转文字",
+    "translateModelHint": "翻译用，按语言对安装"
   }
 }

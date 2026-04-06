@@ -36,28 +36,20 @@ describe('MessageBubble', () => {
     expect(screen.getByText('chat.original')).toBeInTheDocument()
   })
 
-  it('有译文时显示翻译区域', () => {
+  it('有译文时显示翻译区域', async () => {
     const msg = createTestMessage({
       translatedText: '你好',
       targetLang: 'zh'
     })
-    render(<MessageBubble message={msg} showTranslation />)
-    expect(screen.getByText('你好')).toBeInTheDocument()
+    render(<MessageBubble message={msg} />)
+    /* TypewriterText 使用动画逐字显示，等待文本渲染完成 */
+    expect(await screen.findByText('你好')).toBeInTheDocument()
     expect(screen.getByText('chat.translation')).toBeInTheDocument()
-  })
-
-  it('showTranslation=false 时不显示翻译', () => {
-    const msg = createTestMessage({
-      translatedText: '你好',
-      targetLang: 'zh'
-    })
-    render(<MessageBubble message={msg} showTranslation={false} />)
-    expect(screen.queryByText('你好')).not.toBeInTheDocument()
   })
 
   it('没有译文时不显示翻译区域', () => {
     const msg = createTestMessage()
-    render(<MessageBubble message={msg} showTranslation />)
+    render(<MessageBubble message={msg} />)
     expect(screen.queryByText('chat.translation')).not.toBeInTheDocument()
   })
 
@@ -79,7 +71,6 @@ describe('MessageBubble', () => {
     render(
       <MessageBubble
         message={msg}
-        showTranslation
         onRetranslate={onRetranslate}
       />
     )

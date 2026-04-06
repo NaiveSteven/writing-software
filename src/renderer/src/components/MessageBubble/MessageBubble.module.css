@@ -23,6 +23,25 @@
   transform: scale(0.99);
 }
 
+/* --- 双栏布局: 原文左 + 译文右 --- */
+.dualColumn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.dualColumn .original {
+  padding-right: var(--spacing-md);
+  border-right: 1px solid var(--color-divider);
+}
+
+.dualColumn .translation {
+  padding-left: var(--spacing-md);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* --- 头部：标签 + 语言 + 时间 --- */
 .header {
   display: flex;
@@ -30,6 +49,7 @@
   gap: 8px;
   margin-bottom: 8px;
   font-size: 12px;
+  flex-wrap: wrap;
 }
 
 .label {
@@ -71,7 +91,7 @@
   word-break: break-word;
 }
 
-/* --- 译文区域 --- */
+/* --- 译文区域 (无双栏时的回退样式) --- */
 .translation {
   margin-top: 12px;
   padding-top: 12px;
@@ -83,10 +103,7 @@
   font-size: 15px;
   line-height: 1.6;
   word-break: break-word;
-  /* 译文用斜体区分 */
   font-style: italic;
-  padding-left: 12px;
-  border-left: 3px solid var(--color-success);
 }
 
 /* --- 复制按钮 --- */
@@ -130,4 +147,21 @@
 
 .retranslateBtn:hover {
   background: rgba(0, 122, 255, 0.18);
+}
+
+/* --- 打字机光标 --- */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--color-primary);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 0.8s steps(2) infinite;
+}
+
+@keyframes blink-cursor {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
 }

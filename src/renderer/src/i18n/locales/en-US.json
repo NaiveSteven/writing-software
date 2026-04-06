@@ -11,6 +11,9 @@
     "voiceHint": "Hold to speak, release to recognize",
     "voiceEmpty": "Nothing recognized, try again",
     "voiceError": "Voice recognition failed, retry",
+    "voiceModelError": "Voice model loading failed, check network",
+    "modelLoadHint": "Voice model loading for first time, try later",
+    "translateFailed": "Translation failed, retry",
     "shortcutHint": "Shortcut: {{shortcut}}",
     "emptyState": "Say something, I'll translate it",
     "detected": "Detected: {{lang}}",
@@ -58,11 +61,42 @@
     "speechModel": "Speech Recognition Model",
     "translateModel": "Translation Model"
   },
+  "modelDialog": {
+    "needDownload": "Model Download Required",
+    "confirmDesc": "Model {{model}} is needed, download now?",
+    "cancel": "Cancel",
+    "startDownload": "Download",
+    "downloading": "Downloading Model",
+    "initializing": "Initializing model...",
+    "success": "Download Complete",
+    "readyToUse": "Model is ready to use",
+    "ok": "OK",
+    "failed": "Download Failed",
+    "unknownError": "Unknown error, please retry",
+    "retry": "Retry",
+    "close": "Close",
+    "confirmUninstall": "Confirm Uninstall",
+    "uninstallDesc": "Uninstall model {{model}}?",
+    "confirmUninstallBtn": "Uninstall",
+    "uninstalling": "Uninstalling Model",
+    "pleaseWait": "Please wait...",
+    "uninstallSuccess": "Uninstall Complete",
+    "uninstallDone": "Model has been uninstalled",
+    "uninstallFailed": "Uninstall Failed"
+  },
   "settings": {
     "title": "Settings",
+    "back": "Back",
     "language": "Language",
     "theme": "Theme",
     "themeLight": "Light Mode",
-    "themeDark": "Dark Mode"
+    "themeDark": "Dark Mode",
+    "installed": "Installed",
+    "notInstalled": "Not Installed",
+    "install": "Install",
+    "uninstall": "Uninstall",
+    "loading": "Checking model status...",
+    "speechModelHint": "For voice input, converts speech to text",
+    "translateModelHint": "For translation, install per language pair"
   }
 }

@@ -8,8 +8,6 @@ import { useTranslation } from 'react-i18next'
 /** MessageList 属性 */
 interface MessageListProps {
   messages: Message[]
-  /** 是否显示翻译 */
-  showTranslation: boolean
   /** 重新翻译回调 */
   onRetranslate: (id: number, targetLang: LanguageCode) => void
   /** 点击消息打开详情 */
@@ -24,7 +22,6 @@ interface MessageListProps {
  */
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
-  showTranslation,
   onRetranslate,
   onMessageClick,
   onMessageContextMenu
@@ -53,7 +50,6 @@ export const MessageList: React.FC<MessageListProps> = ({
         <MessageBubble
           key={msg.id}
           message={msg}
-          showTranslation={showTranslation}
           onRetranslate={onRetranslate}
           onClick={onMessageClick}
           onContextMenu={onMessageContextMenu}

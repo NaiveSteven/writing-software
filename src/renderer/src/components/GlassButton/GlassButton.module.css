@@ -70,3 +70,14 @@
 .danger:hover:not(:disabled) {
   background: rgba(255, 59, 48, 0.25);
 }
+
+/* Secondary: 中性柔和样式 */
+.secondary {
+  background: var(--color-copy-bg);
+  border-color: var(--glass-border);
+  color: var(--color-text-secondary);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--color-copy-bg-hover);
+}

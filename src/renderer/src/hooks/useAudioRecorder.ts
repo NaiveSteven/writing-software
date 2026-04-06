@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { toast } from '../components/Toast'
 
 /** 录音状态 */
 interface AudioRecorderState {
@@ -8,6 +9,8 @@ interface AudioRecorderState {
   duration: number
   /** 错误信息 */
   error: string | null
+  /** 实时音量 (0~1)，用于波形动画 */
+  volume: number
 }
 
 /** 录音 Hook 返回值 */
@@ -27,19 +30,22 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const [state, setState] = useState<AudioRecorderState>({
     isRecording: false,
     duration: 0,
-    error: null
+    error: null,
+    volume: 0
   })
 
   const streamRef = useRef<MediaStream | null>(null)
   const contextRef = useRef<AudioContext | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
   const chunksRef = useRef<Float32Array[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const volumeRafRef = useRef<number | null>(null)
 
   /** 开始录音 */
   const startRecording = useCallback(async () => {
     try {
-      setState({ isRecording: true, duration: 0, error: null })
+      setState({ isRecording: true, duration: 0, error: null, volume: 0 })
       chunksRef.current = []
 
       /* 请求麦克风权限 */
@@ -59,6 +65,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       const source = context.createMediaStreamSource(stream)
 
+      /* AnalyserNode 用于实时音量检测 */
+      const analyser = context.createAnalyser()
+      analyser.fftSize = 256
+      analyserRef.current = analyser
+      source.connect(analyser)
+
       /* 使用 ScriptProcessor 采集原始 PCM 数据 */
       const processor = context.createScriptProcessor(4096, 1, 1)
       processorRef.current = processor
@@ -71,13 +83,33 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       source.connect(processor)
       processor.connect(context.destination)
 
+      /* 实时音量更新 (requestAnimationFrame) */
+      const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      const updateVolume = (): void => {
+        if (!analyserRef.current) return
+        analyserRef.current.getByteFrequencyData(dataArray)
+        let sum = 0
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i]
+        }
+        const avg = sum / dataArray.length / 255
+        setState((prev) => ({ ...prev, volume: avg }))
+        volumeRafRef.current = requestAnimationFrame(updateVolume)
+      }
+      volumeRafRef.current = requestAnimationFrame(updateVolume)
+
       /* 计时器 */
       timerRef.current = setInterval(() => {
         setState((prev) => ({ ...prev, duration: prev.duration + 1 }))
       }, 1000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start recording'
-      setState({ isRecording: false, duration: 0, error: message })
+      setState({ isRecording: false, duration: 0, error: message, volume: 0 })
+      /* 麦克风权限被拒或设备不可用时，弹出 Toast 提醒 */
+      toast.error(message.includes('Permission') || message.includes('NotAllowed')
+        ? '麦克风权限被拒绝，请在系统设置中允许'
+        : `录音启动失败: ${message}`
+      )
     }
   }, [])
 
@@ -89,12 +121,19 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       timerRef.current = null
     }
 
+    /* 停止音量检测 */
+    if (volumeRafRef.current) {
+      cancelAnimationFrame(volumeRafRef.current)
+      volumeRafRef.current = null
+    }
+
     /* 断开音频节点 */
+    analyserRef.current = null
     processorRef.current?.disconnect()
     contextRef.current?.close()
     streamRef.current?.getTracks().forEach((track) => track.stop())
 
-    setState({ isRecording: false, duration: 0, error: null })
+    setState({ isRecording: false, duration: 0, error: null, volume: 0 })
 
     /* 合并所有音频片段 */
     const chunks = chunksRef.current

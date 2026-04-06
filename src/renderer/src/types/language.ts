@@ -1,5 +1,5 @@
-/** 支持的翻译语言代码 */
-export type LanguageCode = 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'ru' | 'es' | 'it'
+/** 支持的翻译语言代码（韩语已移除，对应 ONNX 模型不存在） */
+export type LanguageCode = 'zh' | 'en' | 'ja' | 'fr' | 'de' | 'ru' | 'es' | 'it'
 
 /** 语言选项（用于 UI 渲染） */
 export interface LanguageOption {
@@ -13,7 +13,6 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'zh', labelKey: 'language.zh' },
   { code: 'en', labelKey: 'language.en' },
   { code: 'ja', labelKey: 'language.ja' },
-  { code: 'ko', labelKey: 'language.ko' },
   { code: 'fr', labelKey: 'language.fr' },
   { code: 'de', labelKey: 'language.de' },
   { code: 'ru', labelKey: 'language.ru' },

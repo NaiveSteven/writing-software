@@ -6,7 +6,7 @@ interface GlassButtonProps {
   children: React.ReactNode
   className?: string
   /** 按钮样式变体 */
-  variant?: 'default' | 'primary' | 'danger'
+  variant?: 'default' | 'primary' | 'secondary' | 'danger'
   /** 按钮尺寸 */
   size?: 'sm' | 'md' | 'lg'
   /** 是否禁用 */

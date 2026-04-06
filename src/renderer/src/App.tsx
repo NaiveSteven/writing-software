@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { ChatPage } from './pages/Chat'
+import { ToastContainer } from './components/Toast'
 import { useSettingStore } from './stores/setting-store'
 
 /**
@@ -14,7 +15,12 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
-  return <ChatPage />
+  return (
+    <>
+      <ToastContainer />
+      <ChatPage />
+    </>
+  )
 }
 
 export default App

@@ -4,12 +4,12 @@ import type { LanguageCode } from '../types/language'
 /**
  * tinyld 语言代码 → 应用语言代码的映射
  * tinyld 返回 ISO 639-1 两字母代码
+ * 注意：ko（韩语）已移除，不再支持
  */
 const LANG_CODE_MAP: Record<string, LanguageCode> = {
   zh: 'zh',
   en: 'en',
   ja: 'ja',
-  ko: 'ko',
   fr: 'fr',
   de: 'de',
   ru: 'ru',

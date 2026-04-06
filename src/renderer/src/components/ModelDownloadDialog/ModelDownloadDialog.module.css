@@ -1,0 +1,162 @@
+/* ============================================
+   模型下载确认+进度弹窗样式
+   液态玻璃风格
+   ============================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease;
+}
+
+.dialog {
+  width: 380px;
+  max-width: 90vw;
+  padding: var(--spacing-lg);
+  background: var(--glass-bg-active);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow-lg);
+  animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.errorTitle {
+  color: var(--color-danger);
+}
+
+.desc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.modelLabel {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  margin-bottom: 12px;
+  font-family: monospace;
+}
+
+/* --- 进度条 --- */
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: var(--color-divider);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-success));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* 进度 100% 后进入初始化阶段：宽度锁定 + 亮度脉冲动画 */
+.progressFillPulse {
+  animation: progressPulse 1.2s ease-in-out infinite;
+}
+
+.progressText {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- 按钮区域 --- */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.cancelBtn,
+.confirmBtn {
+  padding: 8px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.cancelBtn {
+  background: var(--color-copy-bg);
+  color: var(--color-text-secondary);
+}
+
+.cancelBtn:hover {
+  background: var(--color-copy-bg-hover);
+}
+
+.confirmBtn {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.confirmBtn:hover {
+  opacity: 0.9;
+}
+
+.dangerConfirmBtn {
+  padding: 8px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.dangerConfirmBtn:hover {
+  opacity: 0.9;
+}
+
+/* --- 动画 --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

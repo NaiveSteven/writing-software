@@ -29,7 +29,6 @@ describe('MessageList', () => {
     render(
       <MessageList
         messages={[]}
-        showTranslation={false}
         onRetranslate={vi.fn()}
       />
     )
@@ -42,7 +41,6 @@ describe('MessageList', () => {
     render(
       <MessageList
         messages={msgs}
-        showTranslation={false}
         onRetranslate={vi.fn()}
       />
     )
@@ -57,7 +55,6 @@ describe('MessageList', () => {
     render(
       <MessageList
         messages={msgs}
-        showTranslation={false}
         onRetranslate={vi.fn()}
       />
     )

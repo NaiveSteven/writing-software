@@ -50,13 +50,13 @@
   background: var(--glass-bg-hover);
 }
 
-/* --- 翻译控制面板 --- */
-.translationPanel {
+/* --- 翻译控制面板 (内嵌输入区域上方) --- */
+.translateBar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 8px 20px;
-  flex-shrink: 0;
+  margin-bottom: 10px;
 }
 
 .langSelect {
@@ -133,29 +133,4 @@
   50% { opacity: 0.4; }
 }
 
-/* --- 语音错误提示条 --- */
-.voiceErrorBar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 8px 20px;
-  background: var(--color-danger-light);
-  color: var(--color-danger);
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-.voiceErrorBar button {
-  border: none;
-  background: transparent;
-  color: var(--color-danger);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.voiceErrorBar button:hover {
-  background: rgba(255, 59, 48, 0.15);
-}
+/* (voiceErrorBar 已移除，改用全局 Toast 组件) */

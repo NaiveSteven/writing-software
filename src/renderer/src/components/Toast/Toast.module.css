@@ -1,0 +1,132 @@
+/* ============================================
+   顶部悬浮 Toast 通知
+   液态玻璃风格 + 弹入/弹出动画
+   ============================================ */
+
+.container {
+  position: fixed;
+  top: 48px; /* 留出 macOS 标题栏 */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+/* --- 单条 Toast --- */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  min-width: 200px;
+  max-width: 420px;
+  background: var(--glass-bg-active);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow-lg);
+  font-size: 13px;
+  color: var(--color-text);
+  pointer-events: auto;
+  animation: toastIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 退出动画 */
+.toastOut {
+  animation: toastOut 0.25s ease-in forwards;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.95);
+  }
+}
+
+/* --- 图标 --- */
+.icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+/* --- 文字 --- */
+.message {
+  flex: 1;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* --- 关闭按钮 --- */
+.closeBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-copy-bg);
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.closeBtn:hover {
+  background: var(--color-copy-bg-hover);
+  color: var(--color-text);
+}
+
+/* --- 类型变体 --- */
+.info {
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.info .icon {
+  color: var(--color-primary);
+}
+
+.success {
+  border-color: rgba(52, 199, 89, 0.3);
+}
+
+.success .icon {
+  color: var(--color-success);
+}
+
+.warning {
+  border-color: rgba(255, 149, 0, 0.3);
+}
+
+.warning .icon {
+  color: var(--color-warning);
+}
+
+.error {
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.error .icon {
+  color: var(--color-danger);
+}

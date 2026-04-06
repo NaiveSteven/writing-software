@@ -8,6 +8,8 @@ interface VoiceButtonProps {
   isRecording: boolean
   /** 录音时长(秒) */
   duration?: number
+  /** 实时音量 (0~1) */
+  volume?: number
   /** 点击回调 */
   onClick: () => void
   className?: string
@@ -20,6 +22,7 @@ interface VoiceButtonProps {
 export const VoiceButton: React.FC<VoiceButtonProps> = ({
   isRecording,
   duration = 0,
+  volume = 0,
   onClick,
   className = ''
 }) => {
@@ -39,11 +42,17 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
       onClick={onClick}
       title={isRecording ? t('chat.voiceStop') : t('chat.voiceStart')}
     >
-      {/* 脉冲动画层 */}
+      {/* 脉冲动画层 — 尺寸随音量动态缩放 */}
       {isRecording && (
         <>
-          <span className={styles.pulse} />
-          <span className={`${styles.pulse} ${styles.pulseDelay}`} />
+          <span
+            className={styles.pulse}
+            style={{ transform: `scale(${1 + volume * 0.6})` }}
+          />
+          <span
+            className={`${styles.pulse} ${styles.pulseDelay}`}
+            style={{ transform: `scale(${1 + volume * 0.4})` }}
+          />
         </>
       )}
 
