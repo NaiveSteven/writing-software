@@ -22,7 +22,8 @@
     "retranslate": "重新翻译",
     "copy": "复制",
     "copied": "已复制",
-    "transcribing": "语音识别中..."
+    "voiceModelReady": "录音模型就纪，再次点击麦克开始录音",
+    "transcribing": "识别中..."
   },
   "translate": {
     "on": "翻译已开启",
@@ -38,8 +39,11 @@
   "detail": {
     "title": "消息详情",
     "noTranslation": "暂无翻译，选择语言后点重新翻译",
-    "save": "保存修改",
-    "unsaved": "内容已修改"
+    "editHint": "点击编辑原文，失焦后自动保存",
+    "autoSaveHint": "原文修改将在失焦后自动保存",
+    "copyOriginal": "复制原文",
+    "copyTranslation": "复制译文",
+    "copied": "已复制！"
   },
   "language": {
     "zh": "中文",

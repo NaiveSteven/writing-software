@@ -9,8 +9,13 @@
   border: 1px solid var(--glass-border);
   border-radius: 50%;
   background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(1.5);
-  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  /* 液态玻璃内高光 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    var(--glass-shadow);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -22,6 +27,11 @@
 .voiceBtn:hover {
   background: var(--glass-bg-hover);
   color: var(--color-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 4px 16px rgba(0, 122, 255, 0.15),
+    var(--glass-shadow);
+  transform: translateY(-0.5px);
 }
 
 /* --- 录音中状态 --- */
@@ -33,6 +43,11 @@
   background: var(--color-danger-light);
   border-color: rgba(255, 59, 48, 0.3);
   color: var(--color-danger);
+  /* 音量越大，外发光越强，使用 CSS 自定义属性 --vol (0~1) */
+  box-shadow:
+    0 0 0 calc(2px + 8px * var(--vol, 0)) rgba(255, 59, 48, calc(0.08 + 0.18 * var(--vol, 0))),
+    var(--glass-shadow);
+  transition: box-shadow 0.08s ease;
 }
 
 .recording:hover {
@@ -52,31 +67,27 @@
   z-index: 1;
 }
 
-/* --- 脉冲动画 --- */
+/* --- 脉冲描边圆环：只用 border，不用 background，避免与录音时的 pill 形状冲突 --- */
 .pulse {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: rgba(255, 59, 48, 0.2);
-  transform: translate(-50%, -50%);
-  animation: pulseAnim 2s ease-out infinite;
+  inset: 0;
+  border-radius: inherit;
+  border: 1.5px solid rgba(255, 59, 48, 0.55);
+  animation: pulseExpand 1.8s ease-out infinite;
   pointer-events: none;
 }
 
 .pulseDelay {
-  animation-delay: 0.5s;
+  animation-delay: 0.9s;
 }
 
-@keyframes pulseAnim {
+@keyframes pulseExpand {
   0% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.6;
+    transform: scale(1);
+    opacity: 0.7;
   }
   100% {
-    transform: translate(-50%, -50%) scale(2.2);
+    transform: scale(2.4);
     opacity: 0;
   }
 }

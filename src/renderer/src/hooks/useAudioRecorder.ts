@@ -115,25 +115,47 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   /** 停止录音，合并音频数据 */
   const stopRecording = useCallback(async (): Promise<Float32Array | null> => {
-    /* 清理计时器 */
+    /* 1. 立即清理计时器 & 动画帧，避免 state 继续更新 */
     if (timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
     }
-
-    /* 停止音量检测 */
     if (volumeRafRef.current) {
       cancelAnimationFrame(volumeRafRef.current)
       volumeRafRef.current = null
     }
 
-    /* 断开音频节点 */
-    analyserRef.current = null
-    processorRef.current?.disconnect()
-    contextRef.current?.close()
-    streamRef.current?.getTracks().forEach((track) => track.stop())
+    /* 2. 先置空 onaudioprocess 回调，阻止后续音频块写入；
+          这是消除停止时 2~3 秒卡顿的关键：ScriptProcessor 在
+          disconnect 之前仍会触发回调，提前 null 掉可立即停止。 */
+    if (processorRef.current) {
+      processorRef.current.onaudioprocess = null
+    }
 
+    /* 3. 立即更新 UI 状态，让界面秒响应 */
     setState({ isRecording: false, duration: 0, error: null, volume: 0 })
+
+    /* 4. 收集 ref 快照后清空，防止重复调用 */
+    const processor = processorRef.current
+    const context = contextRef.current
+    const stream = streamRef.current
+    processorRef.current = null
+    contextRef.current = null
+    analyserRef.current = null
+    streamRef.current = null
+
+    /* 5. 耗时的 AudioContext.close() 及断开操作延迟执行，
+          不阻塞主线程，避免卡顿 */
+    setTimeout(() => {
+      try { processor?.disconnect() } catch (_) { /* ignore */ }
+      try { stream?.getTracks().forEach((track) => track.stop()) } catch (_) { /* ignore */ }
+      /* AudioContext.close() 是异步的，返回 Promise，用 void 忽略即可 */
+      void context?.close()
+    }, 0)
+
+    /* 6. 让 React 优先完成 UI 渲染（setState 的批量处理）再进行 CPU 密集的合并操作
+          使用 setTimeout(0) 将合并任务放到下一个宏任务，避免阻塞当前渲染帧 */
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
 
     /* 合并所有音频片段 */
     const chunks = chunksRef.current

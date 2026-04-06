@@ -6,8 +6,13 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(1.5);
-  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  /* 顶部内高光：液态玻璃质感核心 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
+    var(--glass-shadow);
   color: var(--color-text);
   font-weight: 500;
   cursor: pointer;
@@ -19,11 +24,18 @@
 
 .btn:hover:not(:disabled) {
   background: var(--glass-bg-hover);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+    var(--glass-shadow);
   transform: translateY(-0.5px);
 }
 
 .btn:active:not(:disabled) {
   background: var(--glass-bg-active);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 2px 4px rgba(0, 0, 0, 0.08);
   transform: scale(0.97);
 }
 
@@ -55,20 +67,33 @@
   background: var(--color-primary-light);
   border-color: rgba(0, 122, 255, 0.3);
   color: var(--color-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(0, 122, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 122, 255, 0.12);
 }
 
 .primary:hover:not(:disabled) {
   background: rgba(0, 122, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(0, 122, 255, 0.25),
+    0 4px 12px rgba(0, 122, 255, 0.18);
 }
 
 .danger {
   background: var(--color-danger-light);
   border-color: rgba(255, 59, 48, 0.25);
   color: var(--color-danger);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 59, 48, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 }
 
 .danger:hover:not(:disabled) {
   background: rgba(255, 59, 48, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 59, 48, 0.2),
+    0 4px 12px rgba(255, 59, 48, 0.15);
 }
 
 /* Secondary: 中性柔和样式 */

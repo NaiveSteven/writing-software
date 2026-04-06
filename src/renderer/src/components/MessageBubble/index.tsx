@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import styles from './MessageBubble.module.css'
 import { TypewriterText } from '../TypewriterText'
@@ -16,6 +16,8 @@ interface MessageBubbleProps {
   onClick?: (message: Message) => void
   /** 右键菜单回调 */
   onContextMenu?: (e: React.MouseEvent, message: Message) => void
+  /** 该消息是否正在翻译中 */
+  isTranslating?: boolean
 }
 
 /**
@@ -27,7 +29,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   onRetranslate,
   onClick,
-  onContextMenu
+  onContextMenu,
+  isTranslating = false
 }) => {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -35,8 +38,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     message.targetLang || 'en'
   )
 
+  /* 同步外部 message.targetLang 更新到语言选择器（如翻译完成后回填 targetLang） */
+  useEffect(() => {
+    if (message.targetLang) setRetranslateLang(message.targetLang)
+  }, [message.targetLang])
+
   /** 是否有译文需要展示（已有译文始终显示） */
   const hasTranslation = !!message.translatedText
+  /** 是否需要双栏布局（有译文或正在翻译中） */
+  const showDualColumn = hasTranslation || isTranslating
 
   /** 复制文本到剪贴板 */
   const handleCopy = async (e: React.MouseEvent, text: string): Promise<void> => {
@@ -64,7 +74,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       }}
     >
       {/* 双栏主体 */}
-      <div className={hasTranslation ? styles.dualColumn : undefined}>
+      <div className={showDualColumn ? styles.dualColumn : undefined}>
         {/* 原文区域 */}
         <div className={styles.original}>
           <div className={styles.header}>
@@ -80,27 +90,50 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <p className={styles.content}>{message.content}</p>
         </div>
 
-        {/* 译文区域 */}
+        {/* 译文区域（有译文时显示，可叠加 loading badge） */}
         {hasTranslation && (
           <div className={styles.translation}>
             <div className={styles.header}>
               <span className={`${styles.label} ${styles.translationLabel}`}>
                 {t('chat.translation')}
               </span>
-              <span className={styles.lang}>
-                → {t(`language.${message.targetLang}`)}
-              </span>
-              <button
-                type="button"
-                className={styles.copyBtn}
-                onClick={(e) => handleCopy(e, message.translatedText!)}
-              >
-                {copied ? t('chat.copied') : t('chat.copy')}
-              </button>
+              {isTranslating ? (
+                <span className={styles.translatingBadge}>{t('translate.translating')}</span>
+              ) : (
+                <>
+                  <span className={styles.lang}>
+                    → {t(`language.${message.targetLang}`)}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.copyBtn}
+                    onClick={(e) => handleCopy(e, message.translatedText!)}
+                  >
+                    {copied ? t('chat.copied') : t('chat.copy')}
+                  </button>
+                </>
+              )}
             </div>
             <p className={styles.translatedContent}>
               <TypewriterText text={message.translatedText!} />
             </p>
+          </div>
+        )}
+
+        {/* 翻译中占位列（无既有译文时显示骨架屏） */}
+        {!hasTranslation && isTranslating && (
+          <div className={`${styles.translation} ${styles.translationLoadingPanel}`}>
+            <div className={styles.header}>
+              <span className={`${styles.label} ${styles.translationLabel}`}>
+                {t('chat.translation')}
+              </span>
+              <span className={styles.translatingBadge}>{t('translate.translating')}</span>
+            </div>
+            <div className={styles.skeletonLines}>
+              <div className={styles.skeletonLine} style={{ width: '80%' }} />
+              <div className={styles.skeletonLine} style={{ width: '62%' }} />
+              <div className={styles.skeletonLine} style={{ width: '72%' }} />
+            </div>
           </div>
         )}
       </div>

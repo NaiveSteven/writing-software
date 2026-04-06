@@ -24,9 +24,10 @@
 
 /* --- 弹窗主体 --- */
 .modal {
-  width: 720px;
-  max-width: 90vw;
-  max-height: 80vh;
+  width: 920px;
+  max-width: 92vw;
+  height: 88vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   background: var(--glass-bg-active);
@@ -127,6 +128,43 @@
   flex-shrink: 0;
 }
 
+/* 标题行右侧（语言信息 + 复制按钮） */
+.panelHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 复制按钮 */
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.copyBtn:hover {
+  background: var(--glass-bg-hover);
+  color: var(--color-text);
+}
+
+.copyBtnCopied {
+  background: var(--color-success-light);
+  border-color: rgba(52, 199, 89, 0.3);
+  color: var(--color-success);
+}
+
 .panelLabel {
   display: inline-flex;
   align-items: center;
@@ -157,19 +195,19 @@
 .textArea {
   flex: 1;
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   background: var(--glass-bg);
   color: var(--color-text);
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.8;
   font-family: inherit;
   resize: none;
   outline: none;
   overflow-y: auto;
   transition: border-color var(--transition-fast);
-  min-height: 160px;
+  min-height: 0;
 }
 
 .textArea:focus {
@@ -180,15 +218,15 @@
 /* 只读的译文展示 */
 .translationText {
   flex: 1;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   background: var(--glass-bg);
   color: var(--color-text);
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.8;
   overflow-y: auto;
-  min-height: 160px;
+  min-height: 0;
   font-style: italic;
 }
 
@@ -213,19 +251,58 @@
   gap: 10px;
 }
 
-.footerRight {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .translateLabel {
   font-size: 13px;
   color: var(--color-text-secondary);
 }
 
-.saveHint {
+.autoSaveHint {
   font-size: 11px;
   color: var(--color-text-tertiary);
-  margin-right: 8px;
+  margin: 0;
+}
+
+/* --- 译文区 loading 状态 --- */
+.translationTextLoading {
+  position: relative;
+  overflow: hidden;
+}
+
+.translatingBadge {
+  font-size: 11px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 8px;
+  border-radius: 6px;
+  animation: fadePulse 1.2s ease-in-out infinite;
+}
+
+.skeletonLines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(
+    90deg,
+    var(--color-divider) 25%,
+    rgba(128, 128, 128, 0.12) 50%,
+    var(--color-divider) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }

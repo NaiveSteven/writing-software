@@ -14,6 +14,8 @@ interface MessageListProps {
   onMessageClick?: (message: Message) => void
   /** 右键菜单回调 */
   onMessageContextMenu?: (e: React.MouseEvent, message: Message) => void
+  /** 当前正在翻译中的消息 ID 集合 */
+  translatingIds?: Set<number>
 }
 
 /**
@@ -24,10 +26,16 @@ export const MessageList: React.FC<MessageListProps> = ({
   messages,
   onRetranslate,
   onMessageClick,
-  onMessageContextMenu
+  onMessageContextMenu,
+  translatingIds
 }) => {
   const { t } = useTranslation()
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  /* 挂载时立即滚动到底部（返回聊天页场景） */
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+  }, [])
 
   /* 新消息到达时自动滚动到底部 */
   useEffect(() => {
@@ -53,6 +61,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           onRetranslate={onRetranslate}
           onClick={onMessageClick}
           onContextMenu={onMessageContextMenu}
+          isTranslating={translatingIds?.has(msg.id)}
         />
       ))}
       {/* 滚动锚点 */}

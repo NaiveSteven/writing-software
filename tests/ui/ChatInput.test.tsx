@@ -22,7 +22,7 @@ vi.mock('@renderer/hooks/useAudioRecorder', () => ({
 /** 共用默认 props */
 const defaultProps = {
   onSendText: vi.fn(),
-  onSendVoice: vi.fn(),
+  onTranscribeVoice: vi.fn().mockResolvedValue(null),
   translateEnabled: false,
   onToggleTranslate: vi.fn(),
   targetLang: 'en' as const,

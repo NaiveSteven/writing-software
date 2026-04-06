@@ -73,6 +73,9 @@ export const ChatPage: React.FC = () => {
   const [whisperStatus, setWhisperStatus] = useState<WhisperStatus>('idle')
   const [transcribing, setTranscribing] = useState(false)
 
+  /* 当前正在翻译中的消息 ID 集合 */
+  const [translatingIds, setTranslatingIds] = useState<Set<number>>(new Set())
+
   /* 右键菜单状态 */
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
@@ -89,6 +92,18 @@ export const ChatPage: React.FC = () => {
   const dialogResolveRef = useRef<((confirmed: boolean) => void) | null>(null)
   /* 记录当前待重试的下载函数 */
   const retryFnRef = useRef<(() => Promise<void>) | null>(null)
+  /* done 弹窗关闭时的 resolve（仅 Whisper 流程用，防止录音自动开始） */
+  const doneDismissRef = useRef<(() => void) | null>(null)
+
+  /** 标记/取消翻译中状态 */
+  const markTranslating = useCallback((id: number, translating: boolean) => {
+    setTranslatingIds((prev) => {
+      const next = new Set(prev)
+      if (translating) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
 
   /* 启动时加载历史消息 */
   useEffect(() => {
@@ -148,6 +163,9 @@ export const ChatPage: React.FC = () => {
   const handleDialogCancel = useCallback(() => {
     dialogResolveRef.current?.(false)
     dialogResolveRef.current = null
+    /* 若 done 阶段用户关闭弹窗，解锁 Whisper 流程（防止录音自动开始） */
+    doneDismissRef.current?.()
+    doneDismissRef.current = null
     retryFnRef.current = null
     setDialog(DIALOG_INITIAL)
   }, [])
@@ -262,9 +280,13 @@ export const ChatPage: React.FC = () => {
 
       try {
         await doInit()
+        /* 等待用户手动关闭 done 弹窗，避免弹窗还在时就自动开始录音 */
         setDialog((d) => ({ ...d, phase: 'done' }))
+        await new Promise<void>((resolve) => { doneDismissRef.current = resolve })
         retryFnRef.current = null
-        return true
+        /* 返回 false：由用户再次点击麦克风主动开始，体验更自然 */
+        toast.info(t('chat.voiceModelReady'))
+        return false
       } catch (err) {
         setWhisperStatus('error')
         setDialog((d) => ({
@@ -294,48 +316,57 @@ export const ChatPage: React.FC = () => {
     setDialog((d) => ({ ...d, phase: 'downloading', progress: 0 }))
     try {
       await doInit()
+      /* 等待用户手动关闭 done 弹窗 */
       setDialog((d) => ({ ...d, phase: 'done' }))
+      await new Promise<void>((resolve) => { doneDismissRef.current = resolve })
       retryFnRef.current = null
-      return true
+      /* 返回 false：用户再次点击麦克风才开始录音 */
+      toast.info(t('chat.voiceModelReady'))
+      return false
     } catch (err) {
       setWhisperStatus('error')
       const errMsg = err instanceof Error ? err.message : String(err)
       setDialog((d) => ({ ...d, phase: 'error', errorMessage: errMsg }))
       return false
     }
-  }, [whisperStatus, showDownloadConfirm])
+  }, [whisperStatus, showDownloadConfirm, t])
 
   /** 发送文字消息 */
   const handleSendText = useCallback(
     async (text: string): Promise<void> => {
       /* 自动检测语言 */
       const sourceLang = detectLanguage(text)
+      /* 先将消息添加到列表，UI 立即响应 */
       const message = await addMessage(text, sourceLang, 'text')
 
-      /* 翻译开启时自动翻译 */
+      /* 翻译在后台异步执行，不阻塞消息显示 */
       if (translateEnabled) {
-        /* 先检查模型是否就绪 */
-        const ready = await ensureTranslateModels(sourceLang, targetLang)
-        if (!ready) return
+        void (async () => {
+          const ready = await ensureTranslateModels(sourceLang, targetLang)
+          if (!ready) return
 
-        try {
-          const translated = await translateText(text, sourceLang, targetLang)
-          await updateTranslation(message.id, translated, targetLang)
-        } catch (err) {
-          console.error('Translation failed:', err)
-          toast.error(t('chat.translateFailed'))
-        }
+          markTranslating(message.id, true)
+          try {
+            const translated = await translateText(text, sourceLang, targetLang)
+            await updateTranslation(message.id, translated, targetLang)
+          } catch (err) {
+            console.error('Translation failed:', err)
+            toast.error(t('chat.translateFailed'))
+          } finally {
+            markTranslating(message.id, false)
+          }
+        })()
       }
     },
-    [addMessage, translateEnabled, targetLang, updateTranslation, t, ensureTranslateModels]
+    [addMessage, translateEnabled, targetLang, updateTranslation, t, ensureTranslateModels, markTranslating]
   )
 
   /** 发送语音数据（渲染进程内 Whisper 推理） */
-  const handleSendVoice = useCallback(
-    async (audioData: Float32Array): Promise<void> => {
+  const handleTranscribeVoice = useCallback(
+    async (audioData: Float32Array): Promise<string | null> => {
       /* 先确保 Whisper 模型就绪 */
       const whisperReady = await ensureWhisperModel()
-      if (!whisperReady) return
+      if (!whisperReady) return null
 
       try {
         setTranscribing(true)
@@ -344,33 +375,19 @@ export const ChatPage: React.FC = () => {
         const text = await transcribeAudio(audioData, langHint)
         if (!text) {
           toast.warning(t('chat.voiceEmpty'))
-          return
+          return null
         }
-
-        const sourceLang = detectLanguage(text)
-        const message = await addMessage(text, sourceLang, 'voice')
-
-        /* 翻译开启时自动翻译 */
-        if (translateEnabled) {
-          const ready = await ensureTranslateModels(sourceLang, targetLang)
-          if (ready) {
-            try {
-              const translated = await translateText(text, sourceLang, targetLang)
-              await updateTranslation(message.id, translated, targetLang)
-            } catch (transErr) {
-              console.error('Translation failed:', transErr)
-              toast.warning(t('chat.translateFailed'))
-            }
-          }
-        }
+        /* 返回识别文字，由 ChatInput 回填到输入框 */
+        return text
       } catch (err) {
         console.error('Voice transcription failed:', err)
         toast.error(t('chat.voiceError'))
+        return null
       } finally {
         setTranscribing(false)
       }
     },
-    [addMessage, translateEnabled, targetLang, uiLang, updateTranslation, t, ensureWhisperModel, ensureTranslateModels]
+    [uiLang, t, ensureWhisperModel]
   )
 
   /** 重新翻译历史消息 */
@@ -383,15 +400,18 @@ export const ChatPage: React.FC = () => {
       const ready = await ensureTranslateModels(msg.sourceLang, newTargetLang)
       if (!ready) return
 
+      markTranslating(id, true)
       try {
         const translated = await translateText(msg.content, msg.sourceLang, newTargetLang)
         await updateTranslation(id, translated, newTargetLang)
       } catch (err) {
         console.error('Re-translation failed:', err)
         toast.error(t('chat.translateFailed'))
+      } finally {
+        markTranslating(id, false)
       }
     },
-    [messages, updateTranslation, t, ensureTranslateModels]
+    [messages, updateTranslation, t, ensureTranslateModels, markTranslating]
   )
 
   /* 注册快捷键 */
@@ -471,24 +491,30 @@ export const ChatPage: React.FC = () => {
     [updateContent]
   )
 
-  /** 详情弹窗: 翻译 */
+  /** 详情弹窗: 翻译（同时同步全局目标语言） */
   const handleDetailTranslate = useCallback(
     async (id: number, lang: LanguageCode): Promise<void> => {
       const msg = messages.find((m) => m.id === id)
       if (!msg) return
 
+      /* 同步全局目标语言，保持弹窗内外一致 */
+      setTargetLang(lang)
+
       const ready = await ensureTranslateModels(msg.sourceLang, lang)
       if (!ready) return
 
+      markTranslating(id, true)
       try {
         const translated = await translateText(msg.content, msg.sourceLang, lang)
         await updateTranslation(id, translated, lang)
       } catch (err) {
         console.error('Translation failed:', err)
         toast.error(t('chat.translateFailed'))
+      } finally {
+        markTranslating(id, false)
       }
     },
-    [messages, updateTranslation, t, ensureTranslateModels]
+    [messages, updateTranslation, t, ensureTranslateModels, setTargetLang, markTranslating]
   )
 
   /* 当 messages 更新时，同步详情弹窗中的消息 */
@@ -571,13 +597,14 @@ export const ChatPage: React.FC = () => {
           onRetranslate={handleRetranslate}
           onMessageClick={handleMessageClick}
           onMessageContextMenu={handleContextMenu}
+          translatingIds={translatingIds}
         />
       </main>
 
       {/* 输入区域 */}
       <ChatInput
         onSendText={handleSendText}
-        onSendVoice={handleSendVoice}
+        onTranscribeVoice={handleTranscribeVoice}
         onBeforeVoice={ensureWhisperModel}
         disabled={transcribing}
         translateEnabled={translateEnabled}
@@ -615,6 +642,9 @@ export const ChatPage: React.FC = () => {
           onClose={() => setDetailMessage(null)}
           onSaveContent={handleSaveContent}
           onTranslate={handleDetailTranslate}
+          currentTargetLang={targetLang}
+          onTargetLangChange={setTargetLang}
+          isTranslating={translatingIds.has(activeDetailMessage.id)}
         />
       )}
     </div>

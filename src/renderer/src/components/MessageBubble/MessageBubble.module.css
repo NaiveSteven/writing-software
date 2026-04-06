@@ -149,6 +149,51 @@
   background: rgba(0, 122, 255, 0.18);
 }
 
+/* --- 翻译中 badge --- */
+.translatingBadge {
+  font-size: 11px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 8px;
+  border-radius: 6px;
+  animation: fadePulse 1.2s ease-in-out infinite;
+}
+
+/* --- 翻译中骨架屏 --- */
+.translationLoadingPanel {
+  padding-left: var(--spacing-md);
+}
+
+.skeletonLines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.skeletonLine {
+  height: 13px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-divider) 25%,
+    rgba(128, 128, 128, 0.12) 50%,
+    var(--color-divider) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* --- 打字机光标 --- */
 .cursor {
   display: inline-block;

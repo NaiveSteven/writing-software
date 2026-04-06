@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 interface TypewriterTextProps {
   /** 最终要展示的全文 */
   text: string
-  /** 每个字符间隔(ms)，默认 30 */
+  /** 每帧间隔(ms)，默认 15；实际每帧显示字符数由文本长度自适应 */
   speed?: number
   /** 自定义 class */
   className?: string
@@ -15,11 +15,12 @@ interface TypewriterTextProps {
 /**
  * 打字机效果文本组件
  * 逐字显示文本，模拟实时翻译输出
+ * 根据文本长度自适应每帧显示字符数，确保长文本也能在 ~500ms 内完成
  * 仅在 text 变化时触发动画，避免重渲染时重复播放
  */
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
   text,
-  speed = 30,
+  speed = 15,
   className = '',
   enabled = true
 }) => {
@@ -45,11 +46,16 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
       clearInterval(timerRef.current)
     }
 
+    /* 自适应：目标约 500ms 内完成，每帧 speed(15ms)
+       charsPerTick = ceil(length / (500/speed)) = ceil(length / 33)
+       短文本最少 1 字符/帧，长文本自动加速 */
+    const charsPerTick = Math.max(1, Math.ceil(text.length / Math.round(500 / speed)))
+
     let index = 0
     setDisplayText('')
 
     timerRef.current = setInterval(() => {
-      index += 1
+      index += charsPerTick
       if (index >= text.length) {
         setDisplayText(text)
         if (timerRef.current) clearInterval(timerRef.current)

@@ -39,20 +39,15 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
     <button
       type="button"
       className={`${styles.voiceBtn} ${isRecording ? styles.recording : ''} ${className}`}
+      style={isRecording ? ({ '--vol': volume } as React.CSSProperties) : undefined}
       onClick={onClick}
       title={isRecording ? t('chat.voiceStop') : t('chat.voiceStart')}
     >
-      {/* 脉冲动画层 — 尺寸随音量动态缩放 */}
+      {/* 脉冲描边圆环 — 仅在录音时显示，纯 CSS 动画，无 inline transform 冲突 */}
       {isRecording && (
         <>
-          <span
-            className={styles.pulse}
-            style={{ transform: `scale(${1 + volume * 0.6})` }}
-          />
-          <span
-            className={`${styles.pulse} ${styles.pulseDelay}`}
-            style={{ transform: `scale(${1 + volume * 0.4})` }}
-          />
+          <span className={styles.pulse} />
+          <span className={`${styles.pulse} ${styles.pulseDelay}`} />
         </>
       )}
 

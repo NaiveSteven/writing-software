@@ -22,7 +22,8 @@
     "retranslate": "Re-translate",
     "copy": "Copy",
     "copied": "Copied",
-    "transcribing": "Recognizing..."
+    "voiceModelReady": "Model ready! Click the mic button to start recording",
+    "transcribing": "Transcribing..."
   },
   "translate": {
     "on": "Translation On",
@@ -38,8 +39,11 @@
   "detail": {
     "title": "Message Detail",
     "noTranslation": "No translation yet, pick a language",
-    "save": "Save",
-    "unsaved": "Unsaved changes"
+    "editHint": "Click to edit, auto-saves on blur",
+    "autoSaveHint": "Original text auto-saves when you leave the field",
+    "copyOriginal": "Copy Original",
+    "copyTranslation": "Copy Translation",
+    "copied": "Copied!"
   },
   "language": {
     "zh": "Chinese",

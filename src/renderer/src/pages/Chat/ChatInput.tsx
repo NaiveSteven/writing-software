@@ -13,11 +13,14 @@ import type { LanguageCode } from '../../types/language'
 interface ChatInputProps {
   /** 发送文字消息 */
   onSendText: (text: string) => void
-  /** 发送语音数据 */
-  onSendVoice: (audioData: Float32Array) => void
+  /**
+   * 语音识别完成后的回调：转写音频 → 返回识别文字
+   * undefined 时语音功能禁用
+   */
+  onTranscribeVoice?: (audioData: Float32Array) => Promise<string | null>
   /** 录音前校验（如检查语音模型），返回 false 阻止录音 */
   onBeforeVoice?: () => Promise<boolean>
-  /** 是否禁用发送 */
+  /** 是否禁用输入（转写中） */
   disabled?: boolean
   /** 翻译开关状态 */
   translateEnabled: boolean
@@ -30,13 +33,13 @@ interface ChatInputProps {
 }
 
 /**
- * 聊天输入区域
- * 包含文字输入框、发送按钮、语音按钮、翻译控制
- * 语言选择器始终显示，翻译按钮点击后由父组件校验模型再切换
+ * 聊天输入区域（重设计版）
+ * 文字输入框宽屏展示，自动撑高；语音与发送按钮移至底部行
+ * 语音识别结果回填到输入框，用户可二次编辑后再发送
  */
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendText,
-  onSendVoice,
+  onTranscribeVoice,
   onBeforeVoice,
   disabled = false,
   translateEnabled,
@@ -56,13 +59,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     setText('')
   }, [text, onSendText])
 
-  /** 切换语音录制（录音前先校验模型） */
+  /** 切换语音录制 */
   const handleVoiceToggle = useCallback(async (): Promise<void> => {
     if (isRecording) {
-      /* 停止录音，发送音频数据 */
+      /* 停止录音，等待 UI 更新后再转写 */
       const audioData = await stopRecording()
-      if (audioData) {
-        onSendVoice(audioData)
+      if (audioData && onTranscribeVoice) {
+        /* 转写结果回填输入框，用户可编辑后发送 */
+        const transcribed = await onTranscribeVoice(audioData)
+        if (transcribed) setText(transcribed)
       }
     } else {
       /* 开始录音前先校验模型是否就绪 */
@@ -72,11 +77,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       }
       await startRecording()
     }
-  }, [isRecording, startRecording, stopRecording, onSendVoice, onBeforeVoice])
+  }, [isRecording, startRecording, stopRecording, onTranscribeVoice, onBeforeVoice])
+
+  const canSend = Boolean(text.trim()) && !disabled && !isRecording
 
   return (
     <div className={styles.inputArea}>
-      {/* 翻译控制栏：目标语言选择（始终显示）+ 翻译开关 Switch */}
+      {/* 翻译控制栏 */}
       <div className={styles.translateBar}>
         <div className={styles.langSelect}>
           <span className={styles.langLabel}>{t('translate.targetLang')}:</span>
@@ -90,16 +97,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         />
       </div>
 
-      <div className={styles.inputRow}>
-        {/* 语音按钮 */}
-        <VoiceButton
-          isRecording={isRecording}
-          duration={duration}
-          volume={volume}
-          onClick={handleVoiceToggle}
-        />
-
-        {/* 文字输入框 */}
+      {/* 输入卡片：全宽 textarea + 底部操作行 */}
+      <div className={styles.inputCard}>
+        {/* 多行文字输入框，自动撑高 */}
         <GlassInput
           value={text}
           onChange={setText}
@@ -107,30 +107,45 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onSubmit={handleSend}
           disabled={disabled || isRecording}
           multiline
+          className={styles.mainTextarea}
         />
 
-        {/* 发送按钮 */}
-        <GlassButton
-          variant="primary"
-          onClick={handleSend}
-          disabled={!text.trim() || disabled || isRecording}
-        >
-          {t('chat.send')}
-        </GlassButton>
-      </div>
+        {/* 底部操作行：语音 | 状态提示 | 发送 */}
+        <div className={styles.inputActions}>
+          {/* 语音按钮（onTranscribeVoice 未传则隐藏） */}
+          {onTranscribeVoice && (
+            <VoiceButton
+              isRecording={isRecording}
+              duration={duration}
+              volume={volume}
+              onClick={handleVoiceToggle}
+            />
+          )}
 
-      {/* 快捷键提示 / 识别状态 */}
-      {disabled ? (
-        <p className={`${styles.hint} ${styles.transcribingHint}`}>
-          {t('chat.transcribing')}
-        </p>
-      ) : (
-        <p className={styles.hint}>
-          {t('chat.shortcutHint', {
-            shortcut: navigator.platform.includes('Mac') ? '⌘ + Tab' : 'Ctrl + Tab'
-          })}
-        </p>
-      )}
+          {/* 中间状态提示 */}
+          <div className={styles.inputHint}>
+            {disabled ? (
+              <span className={styles.transcribingHint}>{t('chat.transcribing')}</span>
+            ) : (
+              <span className={styles.shortcutHint}>
+                {t('chat.shortcutHint', {
+                  shortcut: navigator.platform.includes('Mac') ? '⌘↵' : 'Ctrl↵'
+                })}
+              </span>
+            )}
+          </div>
+
+          {/* 发送按钮 */}
+          <GlassButton
+            variant="primary"
+            size="sm"
+            onClick={handleSend}
+            disabled={!canSend}
+          >
+            {t('chat.send')}
+          </GlassButton>
+        </div>
+      </div>
     </div>
   )
 }
