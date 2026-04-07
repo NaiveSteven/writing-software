@@ -15,8 +15,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px 8px 80px;
+  padding: 12px 20px 8px 80px; /* macOS：左侧 80px 避让红绿灯 */
   flex-shrink: 0;
+}
+
+/**
+ * Windows 标题栏变体：左侧 padding 正常，右侧留空给系统控制按钮
+ * 返回按钮位于左侧（与 Windows 标准 UX 约定一致）
+ */
+.titleBarWin {
+  padding: 12px 80px 8px 16px;
+  justify-content: flex-start;
+  gap: 16px;
 }
 
 .title {

@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   MODEL_MAP,
   getRequiredModelIds,
+  isTranslatePairSupported,
   areTranslateModelsCached,
   getAllTranslateModelStatus,
   isModelLoaded
@@ -47,8 +48,8 @@ describe('translate service', () => {
   })
 
   describe('MODEL_MAP', () => {
-    it('包含 16 个语言对模型', () => {
-      expect(Object.keys(MODEL_MAP).length).toBe(16)
+    it('包含 15 个语言对模型', () => {
+      expect(Object.keys(MODEL_MAP).length).toBe(15)
     })
 
     it('每个语言对的模型 ID 以 Xenova/opus-mt 开头', () => {
@@ -80,11 +81,24 @@ describe('translate service', () => {
       expect(ids).toContain('Xenova/opus-mt-en-jap')
     })
 
-    it('en 到各语言只需 1 个模型', () => {
-      const langs = ['zh', 'ja', 'ko', 'fr', 'de', 'ru', 'es', 'it']
+    it('en 到可直译语言只需 1 个模型', () => {
+      const langs = ['zh', 'ja', 'fr', 'de', 'ru', 'es', 'it']
       for (const lang of langs) {
         expect(getRequiredModelIds('en', lang)).toHaveLength(1)
       }
+    })
+
+    it('当前不支持 en 到 ko 的本地模型路线', () => {
+      expect(getRequiredModelIds('en', 'ko')).toEqual([])
+    })
+
+    it('ko 作为源语言仍可通过英文桥接翻到其他语言', () => {
+      expect(isTranslatePairSupported('ko', 'zh')).toBe(true)
+    })
+
+    it('ko 作为目标语言当前不支持', () => {
+      expect(isTranslatePairSupported('en', 'ko')).toBe(false)
+      expect(isTranslatePairSupported('zh', 'ko')).toBe(false)
     })
   })
 
@@ -121,7 +135,7 @@ describe('translate service', () => {
   describe('getAllTranslateModelStatus', () => {
     it('返回去重后的模型列表', async () => {
       const models = await getAllTranslateModelStatus()
-      /* 16 个语言对中有 16 个唯一模型 */
+      /* 当前映射中的模型 ID 互不重复 */
       const uniqueModels = new Set(Object.values(MODEL_MAP))
       expect(models.length).toBe(uniqueModels.size)
     })

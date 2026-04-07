@@ -19,10 +19,11 @@ import {
   translateText,
   setTranslateProgressCallback,
   areTranslateModelsCached,
-  getRequiredModelIds,
+  isTranslatePairSupported,
   getMissingModelIds,
   downloadModel
 } from '../../services/translate'
+import { typewriterReveal } from '../../utils/typewriter'
 import type { Message } from '../../types/message'
 import type { LanguageCode } from '../../types/language'
 
@@ -62,7 +63,7 @@ export const ChatPage: React.FC = () => {
   /* 状态管理 */
   const {
     messages, loadMessages, addMessage,
-    updateTranslation, deleteMessage, updateContent
+    updateTranslation, deleteMessage, updateContent, setTranslationPreview
   } = useMessageStore()
   const {
     translateEnabled, targetLang, uiLang, theme,
@@ -175,6 +176,11 @@ export const ChatPage: React.FC = () => {
    * @returns true 表示模型已就绪，false 表示用户取消
    */
   const ensureTranslateModels = useCallback(async (sourceLang: string, tgtLang: string): Promise<boolean> => {
+    if (!isTranslatePairSupported(sourceLang, tgtLang)) {
+      toast.error(t('chat.translatePairUnsupported'))
+      return false
+    }
+
     const cached = await areTranslateModelsCached(sourceLang, tgtLang)
     if (cached) return true
 
@@ -255,49 +261,19 @@ export const ChatPage: React.FC = () => {
 
     const cached = await isWhisperCached()
     if (cached) {
-      /* 已缓存但未加载到内存 */
-      setDialog({
-        visible: true,
-        phase: 'downloading',
-        action: 'install',
-        modelName: WHISPER_MODEL_ID,
-        progress: 0
-      })
-
-      /* 保存重试函数 */
-      retryFnRef.current = async () => {
-        try {
-          await doInit()
-          setDialog((d) => ({ ...d, phase: 'done' }))
-        } catch (err) {
-          setWhisperStatus('error')
-          setDialog((d) => ({
-            ...d, phase: 'error',
-            errorMessage: err instanceof Error ? err.message : String(err)
-          }))
-        }
-      }
-
+      /* 已下载：静默从本地缓存加载到 Worker，不弹任何弹窗
+         用户点击麦克风后会有短暂等待（~1s），但体验远好于进度弹窗 */
       try {
-        await doInit()
-        /* 等待用户手动关闭 done 弹窗，避免弹窗还在时就自动开始录音 */
-        setDialog((d) => ({ ...d, phase: 'done' }))
-        await new Promise<void>((resolve) => { doneDismissRef.current = resolve })
-        retryFnRef.current = null
-        /* 返回 false：由用户再次点击麦克风主动开始，体验更自然 */
-        toast.info(t('chat.voiceModelReady'))
-        return false
+        await doInit()   /* initWhisper 无进度回调，安静地从 Cache 读取 */
+        return true
       } catch (err) {
         setWhisperStatus('error')
-        setDialog((d) => ({
-          ...d, phase: 'error',
-          errorMessage: err instanceof Error ? err.message : String(err)
-        }))
+        toast.error(err instanceof Error ? err.message : t('chat.voiceModelError'))
         return false
       }
     }
 
-    /* 未缓存，弹窗确认 */
+    /* 未缓存：弹确认框，下载后初始化 */
     const confirmed = await showDownloadConfirm(WHISPER_MODEL_ID)
     if (!confirmed) return false
 
@@ -320,8 +296,8 @@ export const ChatPage: React.FC = () => {
       setDialog((d) => ({ ...d, phase: 'done' }))
       await new Promise<void>((resolve) => { doneDismissRef.current = resolve })
       retryFnRef.current = null
-      /* 返回 false：用户再次点击麦克风才开始录音 */
       toast.info(t('chat.voiceModelReady'))
+      /* 返回 false：让用户重新点击麦克风开始录音，而非下载完就自动开始 */
       return false
     } catch (err) {
       setWhisperStatus('error')
@@ -347,8 +323,20 @@ export const ChatPage: React.FC = () => {
 
           markTranslating(message.id, true)
           try {
-            const translated = await translateText(text, sourceLang, targetLang)
-            await updateTranslation(message.id, translated, targetLang)
+            /* 翻译完成后通过打字机效果展示译文 */
+            const result = await translateText(text, sourceLang, targetLang)
+            const displayText = result.trim()
+
+            if (displayText) {
+              /* 打字机速度根据文本长度动态调整，长文本加快展示 */
+              const typeMs = Math.min(Math.max(displayText.length * 5, 500), 2000)
+              await typewriterReveal(displayText, (partial) => {
+                setTranslationPreview(message.id, partial, targetLang)
+              }, typeMs)
+            }
+
+            /* 最终持久化到数据库 */
+            await updateTranslation(message.id, displayText || text, targetLang)
           } catch (err) {
             console.error('Translation failed:', err)
             toast.error(t('chat.translateFailed'))
@@ -358,26 +346,25 @@ export const ChatPage: React.FC = () => {
         })()
       }
     },
-    [addMessage, translateEnabled, targetLang, updateTranslation, t, ensureTranslateModels, markTranslating]
+    [addMessage, translateEnabled, targetLang, updateTranslation, setTranslationPreview, t, ensureTranslateModels, markTranslating]
   )
 
-  /** 发送语音数据（渲染进程内 Whisper 推理） */
+  /**
+   * 语音识别结束回调：最终转写全量音频并返回结果
+   */
   const handleTranscribeVoice = useCallback(
     async (audioData: Float32Array): Promise<string | null> => {
-      /* 先确保 Whisper 模型就绪 */
       const whisperReady = await ensureWhisperModel()
       if (!whisperReady) return null
 
       try {
         setTranscribing(true)
-        /* 根据界面语言传入提示，提升中日韩等语言识别准确率 */
         const langHint = getWhisperLanguageHint(uiLang)
         const text = await transcribeAudio(audioData, langHint)
         if (!text) {
           toast.warning(t('chat.voiceEmpty'))
           return null
         }
-        /* 返回识别文字，由 ChatInput 回填到输入框 */
         return text
       } catch (err) {
         console.error('Voice transcription failed:', err)
@@ -388,6 +375,37 @@ export const ChatPage: React.FC = () => {
       }
     },
     [uiLang, t, ensureWhisperModel]
+  )
+
+  /**
+   * 分段层流式识别回调
+   *
+   * 策略：每次只转写【上次识别位置 → 当前】的新增顟段，将识别结果 **追加**到输入框
+   * 而非替换全文 —— 從根本上解决“盖写陆段文字”问题。
+   *
+   * @param newAudio   本次待识别的新增片段（不包含已提交的旧音频）
+   * @param prevText   目前输入框中已有的文字（前缀）
+   * @returns          新的完整文字（prevText + 本次识别片段）
+   */
+  const handleSegmentTranscribe = useCallback(
+    async (newAudio: Float32Array, prevText: string): Promise<string | null> => {
+      if (getWhisperStatus() !== 'ready') return null
+      /* 新增片段过短，跳过 */
+      if (newAudio.length / 16000 < 1.0) return null
+      try {
+        const langHint = getWhisperLanguageHint(uiLang)
+        const segText = await transcribeAudio(newAudio, langHint)
+        if (!segText) return null
+        /* 拼接：已有文字 + 空格 + 新识别组 */
+        const joined = prevText
+          ? prevText.trimEnd() + ' ' + segText.trim()
+          : segText.trim()
+        return joined
+      } catch {
+        return null
+      }
+    },
+    [uiLang]
   )
 
   /** 重新翻译历史消息 */
@@ -605,6 +623,7 @@ export const ChatPage: React.FC = () => {
       <ChatInput
         onSendText={handleSendText}
         onTranscribeVoice={handleTranscribeVoice}
+        onSegmentTranscribe={handleSegmentTranscribe}
         onBeforeVoice={ensureWhisperModel}
         disabled={transcribing}
         translateEnabled={translateEnabled}

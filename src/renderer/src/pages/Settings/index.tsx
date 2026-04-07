@@ -42,11 +42,11 @@ const DIALOG_INIT: LocalDialogState = {
   progress: 0
 }
 
-/** Whisper 模型大小提示 */
-const WHISPER_SIZE_HINT = '~40 MB'
+/** Whisper small q4 量化大小 */
+const WHISPER_SIZE_HINT = '~280 MB'
 
-/** 翻译模型平均大小提示 */
-const TRANSLATE_SIZE_HINT = '~30 MB'
+/** opus-mt int8 量化单模型大小（encoder + decoder 共约 105MB） */
+const TRANSLATE_SIZE_HINT = '~105 MB'
 
 /**
  * 设置页面
@@ -55,6 +55,9 @@ const TRANSLATE_SIZE_HINT = '~30 MB'
  */
 export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { t } = useTranslation()
+
+  /** macOS：红绿灯在左侧，标题栏需要 80px 左缩进，返回按钮放右侧 */
+  const isMac = typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac')
 
   /* 翻译模型列表 */
   const [translateModels, setTranslateModels] = useState<ModelInfo[]>([])
@@ -261,19 +264,35 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   return (
     <div className={styles.container}>
-      {/* 标题栏 — 与 Chat 页统一风格，避让 macOS 红绿灯 */}
-      <header className={`${styles.titleBar} drag-region`}>
-        <h1 className={styles.title}>{t('settings.title')}</h1>
-        <div className={`${styles.headerActions} no-drag`}>
+      {/* 标题栏 — 按平台调整布局：macOS 红绿灯左置 / Windows 返回按钮左置 */}
+      <header className={`${styles.titleBar} ${isMac ? '' : styles.titleBarWin} drag-region`}>
+        {/* Windows：返回按钮在左侧（与 Windows 标题栏约定一致） */}
+        {!isMac && (
           <button
             type="button"
-            className={styles.backBtn}
+            className={`${styles.backBtn} no-drag`}
             onClick={onBack}
             title={t('settings.back')}
           >
-            {t('settings.back')}
+            ← {t('settings.back')}
           </button>
-        </div>
+        )}
+
+        <h1 className={styles.title}>{t('settings.title')}</h1>
+
+        {/* macOS：返回按钮在右侧（避让左侧红绿灯） */}
+        {isMac && (
+          <div className={`${styles.headerActions} no-drag`}>
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={onBack}
+              title={t('settings.back')}
+            >
+              {t('settings.back')}
+            </button>
+          </div>
+        )}
       </header>
 
       <div className={styles.content}>

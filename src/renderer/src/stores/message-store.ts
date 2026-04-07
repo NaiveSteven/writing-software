@@ -16,6 +16,8 @@ interface MessageState {
   addMessage: (content: string, sourceLang: string, inputType: 'text' | 'voice') => Promise<Message>
   /** 更新消息的翻译结果 */
   updateTranslation: (id: number, translatedText: string, targetLang: LanguageCode) => Promise<void>
+  /** 仅更新内存中的翻译预览（不写 DB），用于流式翻译的实时预览 */
+  setTranslationPreview: (id: number, translatedText: string, targetLang: LanguageCode) => void
   /** 删除消息 */
   deleteMessage: (id: number) => Promise<void>
   /** 更新消息原文 */
@@ -55,6 +57,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
       msg.id === id
         ? { ...msg, translatedText, targetLang, updatedAt: new Date().toISOString() }
         : msg
+    )
+    set({ messages })
+  },
+
+  setTranslationPreview: (id, translatedText, targetLang) => {
+    /* 仅更新内存状态，不触发 IPC 写 DB，用于流式翻译实时刷新 */
+    const messages = get().messages.map((msg) =>
+      msg.id === id ? { ...msg, translatedText, targetLang } : msg
     )
     set({ messages })
   },

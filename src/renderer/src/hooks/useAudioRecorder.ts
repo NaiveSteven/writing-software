@@ -19,6 +19,8 @@ interface UseAudioRecorderReturn extends AudioRecorderState {
   startRecording: () => Promise<void>
   /** 停止录音并返回音频数据 */
   stopRecording: () => Promise<Float32Array | null>
+  /** 获取当前录音的完整音频快照（不停止录音），用于流式识别 */
+  getCurrentAudio: () => Float32Array | null
 }
 
 /**
@@ -173,9 +175,28 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     return result
   }, [])
 
+  /**
+   * 获取当前录音缓冲区的合并快照（不停止录音）
+   * 每次调用都创建新的 Float32Array，可安全传入 Worker 做 buffer transfer
+   */
+  const getCurrentAudio = useCallback((): Float32Array | null => {
+    const chunks = chunksRef.current
+    if (chunks.length === 0) return null
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0)
+    if (totalLength === 0) return null
+    const result = new Float32Array(totalLength)
+    let offset = 0
+    for (const chunk of chunks) {
+      result.set(chunk, offset)
+      offset += chunk.length
+    }
+    return result
+  }, [])
+
   return {
     ...state,
     startRecording,
-    stopRecording
+    stopRecording,
+    getCurrentAudio
   }
 }

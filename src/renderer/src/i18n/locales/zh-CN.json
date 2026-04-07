@@ -14,6 +14,7 @@
     "voiceModelError": "语音模型加载失败，检查网络",
     "modelLoadHint": "语音模型首次加载中，稍后再试",
     "translateFailed": "翻译失败，请重试",
+    "translatePairUnsupported": "这个语言方向暂不支持",
     "shortcutHint": "快捷键: {{shortcut}}",
     "emptyState": "说点什么吧，我帮你翻译",
     "detected": "检测到: {{lang}}",
@@ -22,10 +23,13 @@
     "retranslate": "重新翻译",
     "copy": "复制",
     "copied": "已复制",
-    "voiceModelReady": "录音模型就纪，再次点击麦克开始录音",
-    "transcribing": "识别中..."
+    "voiceModelReady": "录音模型准备就绪，再次点击麦克开始录音",
+    "transcribing": "识别中...",
+    "voiceListening": "正在听，说吧...",
+    "voiceStreaming": "识别中，继续说..."
   },
   "translate": {
+    "label": "翻译",
     "on": "翻译已开启",
     "off": "翻译已关闭",
     "targetLang": "翻译为",

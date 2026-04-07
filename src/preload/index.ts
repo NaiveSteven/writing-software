@@ -22,10 +22,6 @@ interface DownloadProgress {
   totalBytes: number
 }
 
-/**
- * 暴露给渲染进程的安全 API
- * 通过 contextBridge 确保主进程隔离
- */
 const api = {
   /* --- 消息操作 --- */
   createMessage: (params: CreateMessageParams) =>
@@ -42,10 +38,6 @@ const api = {
 
   updateContent: (id: number, content: string) =>
     ipcRenderer.invoke('message:updateContent', id, content),
-
-  /* --- 翻译 --- */
-  translateText: (text: string, sourceLang: string, targetLang: string) =>
-    ipcRenderer.invoke('translate:text', text, sourceLang, targetLang),
 
   /* --- 语音识别 --- */
   transcribeAudio: (audioData: Float32Array) =>

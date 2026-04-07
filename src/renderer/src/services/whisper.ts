@@ -1,19 +1,8 @@
 /**
- * Whisper 语音识别服务 (渲染进程侧)
- * 使用 @huggingface/transformers 在 Chromium 中运行 ONNX Whisper 模型
- * 模型首次使用时自动从 HuggingFace 镜像下载并缓存到浏览器 Cache
+ * Whisper 语音识别服务（主线程侧）
+ * 通过 Web Worker 代理 ONNX 推理，避免阻塞渲染主线程
+ * 主线程仅负责 Cache API 检测和 Worker 消息调度
  */
-
-import {
-  pipeline,
-  env,
-  type AutomaticSpeechRecognitionPipeline,
-  type AutomaticSpeechRecognitionOutput
-} from '@huggingface/transformers'
-
-/* 使用 HuggingFace 镜像源（解决国内 SSL/网络问题） */
-env.remoteHost = 'https://hf-mirror.com'
-env.allowLocalModels = false
 
 /** Whisper 模型状态 */
 export type WhisperStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -23,32 +12,194 @@ export type ProgressCallback = (progress: {
   status: string
   file?: string
   progress?: number
-  loaded?: number
-  total?: number
 }) => void
 
-/** 默认使用 whisper-tiny, 体积小（~40MB）适合 Demo */
-export const WHISPER_MODEL_ID = 'onnx-community/whisper-tiny'
+/** 默认 Whisper 模型（whisper-small，约 280MB q4，多语言识别精度大幅优于 base） */
+export const WHISPER_MODEL_ID = 'onnx-community/whisper-small'
 
-/** 单例 pipeline 实例 */
-let whisperPipeline: AutomaticSpeechRecognitionPipeline | null = null
-let currentStatus: WhisperStatus = 'idle'
+/* ============================================================
+   Worker 消息协议类型定义
+   ============================================================ */
 
-/** 最小有效音频时长（秒），低于此阈值不送入模型 */
-const MIN_AUDIO_DURATION_SEC = 0.5
-/** 静音阈值 — 绝对值低于此值视为静音 */
-const SILENCE_THRESHOLD = 0.01
+/** 主线程 → Worker 的消息类型 */
+type WorkerRequest =
+  | { type: 'LOAD'; id: number; modelId: string }
+  | { type: 'TRANSCRIBE'; id: number; audio: Float32Array; language?: string }
+  | { type: 'DISPOSE'; id: number }
+
+/** Worker → 主线程的消息类型 */
+type WorkerResponse =
+  | { type: 'PROGRESS'; id: number; modelId: string; status: string; progress?: number }
+  | { type: 'LOAD_OK'; id: number }
+  | { type: 'LOAD_ERR'; id: number; error: string }
+  | { type: 'TRANSCRIBE_OK'; id: number; text: string }
+  | { type: 'TRANSCRIBE_ERR'; id: number; error: string }
+  | { type: 'DISPOSE_OK'; id: number }
+
+/** 挂起请求回调结构 */
+interface PendingRequest {
+  resolve: (value: unknown) => void
+  reject: (err: Error) => void
+}
+
+/* ============================================================
+   WhisperWorkerClient — 封装与 Worker 的通信
+   ============================================================ */
 
 /**
- * 获取当前 Whisper 状态
+ * Whisper Worker 客户端
+ * 管理 Worker 生命周期，将异步消息抽象为 Promise API
  */
+class WhisperWorkerClient {
+  private worker: Worker | null = null
+  private readonly pending = new Map<number, PendingRequest>()
+  private nextId = 1
+  private _status: WhisperStatus = 'idle'
+  /** 当前进度回调（仅加载阶段有效） */
+  private progressCallback: ProgressCallback | null = null
+
+  /** 延迟初始化 Worker（避免不必要的资源消耗） */
+  private getWorker(): Worker {
+    if (this.worker) return this.worker
+    this.worker = new Worker(
+      new URL('../workers/whisper.worker', import.meta.url),
+      { type: 'module' }
+    )
+    this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => this.handleMessage(e.data)
+    this.worker.onerror = (e) => console.error('[WhisperWorker] error:', e)
+    return this.worker
+  }
+
+  /** 处理 Worker 发来的所有消息 */
+  private handleMessage(msg: WorkerResponse): void {
+    /* PROGRESS 不对应具体 pending，直接转发给回调 */
+    if (msg.type === 'PROGRESS') {
+      this.progressCallback?.({ status: msg.status, progress: msg.progress })
+      return
+    }
+    const req = this.pending.get(msg.id)
+    if (!req) return
+    this.pending.delete(msg.id)
+
+    if (msg.type === 'LOAD_OK') {
+      this._status = 'ready'
+      req.resolve(undefined)
+    } else if (msg.type === 'LOAD_ERR') {
+      this._status = 'error'
+      req.reject(new Error(msg.error))
+    } else if (msg.type === 'TRANSCRIBE_OK') {
+      req.resolve(msg.text)
+    } else if (msg.type === 'TRANSCRIBE_ERR') {
+      req.reject(new Error(msg.error))
+    } else if (msg.type === 'DISPOSE_OK') {
+      this._status = 'idle'
+      req.resolve(undefined)
+    }
+  }
+
+  /** 当前状态 */
+  getStatus(): WhisperStatus {
+    return this._status
+  }
+
+  /**
+   * 加载 Whisper 模型（从缓存快速加载 / 首次下载）
+   * 若已就绪则立即返回；若正在加载则等待完成
+   */
+  async load(modelId: string, onProgress?: ProgressCallback): Promise<void> {
+    if (this._status === 'ready') return
+    if (this._status === 'loading') {
+      /* 等待当前加载完成 */
+      return new Promise<void>((resolve, reject) => {
+        const poll = (): void => {
+          if (this._status === 'ready') resolve()
+          else if (this._status === 'error') reject(new Error('Whisper load failed'))
+          else setTimeout(poll, 100)
+        }
+        poll()
+      })
+    }
+
+    this._status = 'loading'
+    this.progressCallback = onProgress ?? null
+    const id = this.nextId++
+    return new Promise<void>((resolve, reject) => {
+      this.pending.set(id, { resolve: () => resolve(), reject })
+      this.getWorker().postMessage({ type: 'LOAD', id, modelId } satisfies WorkerRequest)
+    })
+  }
+
+  /**
+   * 转写音频（需先 load）
+   * buffer 所有权通过 Transferable 零拷贝传入 Worker
+   * 超过 30s 自动失败，避免过长等待
+   */
+  async transcribe(audio: Float32Array, language?: string): Promise<string> {
+    const TIMEOUT_MS = 30_000
+    const id = this.nextId++
+    const transcribePromise = new Promise<string>((resolve, reject) => {
+      this.pending.set(id, { resolve: (v) => resolve(v as string), reject })
+      this.getWorker().postMessage(
+        { type: 'TRANSCRIBE', id, audio, language } satisfies WorkerRequest,
+        [audio.buffer]
+      )
+    })
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error('Transcription timeout (30s)'))
+      }, TIMEOUT_MS)
+    )
+    return Promise.race([transcribePromise, timeoutPromise])
+  }
+
+  /**
+   * 释放 Worker 内 pipeline 并终止 Worker 线程
+   */
+  async dispose(): Promise<void> {
+    const worker = this.worker
+    if (!worker) return
+    const id = this.nextId++
+    return new Promise<void>((resolve) => {
+      const cleanup = (): void => {
+        worker.terminate()
+        this.worker = null
+        this._status = 'idle'
+        this.progressCallback = null
+        resolve()
+      }
+      this.pending.set(id, { resolve: cleanup, reject: cleanup })
+      worker.postMessage({ type: 'DISPOSE', id } satisfies WorkerRequest)
+    })
+  }
+}
+
+/** 全局单例 Worker 客户端 */
+const workerClient = new WhisperWorkerClient()
+
+/* ============================================================
+   公开 API（与原 whisper.ts 保持相同签名，调用方无需改动）
+   ============================================================ */
+
+/** 获取当前 Whisper 状态 */
 export function getWhisperStatus(): WhisperStatus {
-  return currentStatus
+  return workerClient.getStatus()
+}
+
+/**
+ * 初始化（加载）Whisper 模型
+ * 已缓存时快速加载；未缓存时触发下载
+ */
+export async function initWhisper(
+  onProgress?: ProgressCallback,
+  modelId: string = WHISPER_MODEL_ID
+): Promise<void> {
+  await workerClient.load(modelId, onProgress)
 }
 
 /**
  * 检查 Whisper 模型是否已缓存到浏览器 Cache
- * 必须找到 .onnx 模型文件才算已缓存（避免只缓存了 config/tokenizer 的误判）
+ * 必须找到 .onnx 文件才视为已缓存，防止只缓存 tokenizer 误判
  */
 export async function isWhisperCached(): Promise<boolean> {
   try {
@@ -72,14 +223,11 @@ export async function isWhisperCached(): Promise<boolean> {
 }
 
 /**
- * 卸载 Whisper 模型 — 清除 Cache + 释放内存
+ * 删除 Whisper 模型缓存并终止 Worker
+ * 对应"卸载模型"操作
  */
 export async function deleteWhisperCache(): Promise<void> {
-  if (whisperPipeline) {
-    await whisperPipeline.dispose()
-    whisperPipeline = null
-    currentStatus = 'idle'
-  }
+  await workerClient.dispose()
   try {
     const cacheNames = await caches.keys()
     for (const name of cacheNames) {
@@ -95,170 +243,47 @@ export async function deleteWhisperCache(): Promise<void> {
       }
     }
   } catch (err) {
-    console.warn('Failed to delete whisper cache:', err)
+    console.warn('[WhisperService] Failed to delete cache:', err)
   }
 }
 
 /**
- * 初始化 Whisper 模型
- * 会触发模型下载（首次）和 ONNX session 创建
- * @param onProgress - 可选的进度回调（接收聚合后的总进度）
- * @param modelId - 可选的模型 ID，默认 whisper-tiny
- */
-export async function initWhisper(
-  onProgress?: ProgressCallback,
-  modelId: string = WHISPER_MODEL_ID
-): Promise<void> {
-  if (whisperPipeline) return
-  if (currentStatus === 'loading') return
-
-  currentStatus = 'loading'
-
-  /* 每个文件的独立进度，用于聚合 */
-  const fileProgress = new Map<string, number>()
-  /* 高水位线，防止进度倒退 */
-  let highWatermark = 0
-
-  try {
-    /*
-     * 禁止 WASM Worker 代理，避免 Electron 打包环境中 WebWorker 模式失败。
-     * 与 translate.ts 一致：env.backends.onnx.wasm 第一次调用前可能未初始化，
-     * 需确保对象存在后再赋值。
-     */
-    const onnxEnv = env.backends?.onnx
-    if (onnxEnv) {
-      if (!onnxEnv.wasm) {
-        (onnxEnv as { wasm?: { proxy: boolean } }).wasm = { proxy: false }
-      } else {
-        onnxEnv.wasm.proxy = false
-      }
-    }
-
-    whisperPipeline = await pipeline(
-      'automatic-speech-recognition',
-      modelId,
-      {
-        /* q4 量化：兼容性优于 q8，避免 ONNX Runtime NB-bits 报错 */
-        dtype: 'q4',
-        device: 'wasm',
-        progress_callback: (p: Record<string, unknown>) => {
-          if (!onProgress) return
-          const status = p.status as string
-          const file = (p.file as string) || 'unknown'
-
-          /* 文件开始下载时注册，保证分母正确 */
-          if (status === 'initiate' || status === 'download') {
-            if (!fileProgress.has(file)) {
-              fileProgress.set(file, 0)
-            }
-          }
-
-          if (status === 'progress' && typeof p.progress === 'number') {
-            /* 聚合多文件进度（高水位，不倒退） */
-            fileProgress.set(file, p.progress as number)
-            const denominator = fileProgress.size
-            const values = Array.from(fileProgress.values())
-            const avg = values.reduce((a, b) => a + b, 0) / denominator
-            highWatermark = Math.max(highWatermark, avg)
-            onProgress({ status, file, progress: highWatermark })
-          } else {
-            onProgress({ status, file, progress: p.progress as number | undefined })
-          }
-        }
-      }
-    )
-    currentStatus = 'ready'
-  } catch (err) {
-    currentStatus = 'error'
-    whisperPipeline = null
-    /* 清除已缓存的部分文件，避免下次误报"已安装" */
-    deleteWhisperCache().catch(() => { /* 忽略清理失败 */ })
-    throw err
-  }
-}
-
-/**
- * 检测音频是否为静音
- * 通过计算 RMS 振幅判断
- */
-function isAudioSilent(audioData: Float32Array): boolean {
-  let sumSquares = 0
-  for (let i = 0; i < audioData.length; i++) {
-    sumSquares += audioData[i] * audioData[i]
-  }
-  const rms = Math.sqrt(sumSquares / audioData.length)
-  return rms < SILENCE_THRESHOLD
-}
-
-/**
- * UI 语言代码 → Whisper 语言名称映射
- * Whisper 使用语言名称（非 ISO 代码），如 'chinese' 而非 'zh'
+ * UI 语言代码 → Whisper 语言名称
+ * Whisper 使用语言全名（如 'chinese'），而非 ISO 代码
  */
 const LANG_CODE_TO_WHISPER: Record<string, string> = {
   'zh-CN': 'chinese',
   'en-US': 'english',
-  'ja': 'japanese',
-  'fr': 'french',
-  'de': 'german',
-  'ru': 'russian',
-  'es': 'spanish',
-  'it': 'italian'
+  ja: 'japanese',
+  fr: 'french',
+  de: 'german',
+  ru: 'russian',
+  es: 'spanish',
+  it: 'italian'
 }
 
-/**
- * 将界面语言代码转为 Whisper 语言名称
- * @param uiLang - 如 'zh-CN', 'en-US'
- */
+/** 将 UI 语言代码转为 Whisper 语言提示 */
 export function getWhisperLanguageHint(uiLang: string): string | undefined {
   return LANG_CODE_TO_WHISPER[uiLang]
 }
 
 /**
- * 转录音频数据为文字
- * @param audioData - 16kHz 单声道 PCM Float32Array
- * @param language  - 可选的 Whisper 语言提示（如 'chinese'），不传则自动检测
- * @returns 识别出的文字，空字符串表示无有效内容
+ * 转写音频为文字
+ * 调用前须确保已通过 initWhisper() 完成加载
+ * @param audioData 16kHz 单声道 PCM Float32Array
+ * @param language  Whisper 语言提示（如 'chinese'），不传则自动检测
  */
 export async function transcribeAudio(audioData: Float32Array, language?: string): Promise<string> {
-  /* 音频时长校验 (16kHz 采样率) */
-  const durationSec = audioData.length / 16000
-  if (durationSec < MIN_AUDIO_DURATION_SEC) {
-    console.warn(`Audio too short: ${durationSec.toFixed(2)}s`)
-    return ''
+  if (workerClient.getStatus() !== 'ready') {
+    throw new Error('Whisper not initialized. Call initWhisper() first.')
   }
-
-  /* 静音检测 */
-  if (isAudioSilent(audioData)) {
-    console.warn('Audio is silent, skipping transcription')
-    return ''
-  }
-
-  /* 如果模型未初始化，自动加载 */
-  if (!whisperPipeline) {
-    await initWhisper()
-  }
-
-  if (!whisperPipeline) {
-    throw new Error('Whisper model failed to initialize')
-  }
-
-  const result = await whisperPipeline(audioData, {
-    task: 'transcribe',
-    /* 传入语言提示可显著提升识别准确率，尤其对中日韩等非英语语言 */
-    language: language,
-    return_timestamps: false
-  }) as AutomaticSpeechRecognitionOutput
-
-  return result.text.trim()
+  return workerClient.transcribe(audioData, language)
 }
 
 /**
- * 释放模型资源
+ * 释放 Whisper 资源（终止 Worker）
+ * @deprecated 卸载时请改用 deleteWhisperCache()，它同时清理 Cache
  */
 export async function disposeWhisper(): Promise<void> {
-  if (whisperPipeline) {
-    await whisperPipeline.dispose()
-    whisperPipeline = null
-    currentStatus = 'idle'
-  }
+  await workerClient.dispose()
 }

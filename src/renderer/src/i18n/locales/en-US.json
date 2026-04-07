@@ -14,6 +14,7 @@
     "voiceModelError": "Voice model loading failed, check network",
     "modelLoadHint": "Voice model loading for first time, try later",
     "translateFailed": "Translation failed, retry",
+    "translatePairUnsupported": "This language direction is not supported yet",
     "shortcutHint": "Shortcut: {{shortcut}}",
     "emptyState": "Say something, I'll translate it",
     "detected": "Detected: {{lang}}",
@@ -23,9 +24,12 @@
     "copy": "Copy",
     "copied": "Copied",
     "voiceModelReady": "Model ready! Click the mic button to start recording",
-    "transcribing": "Transcribing..."
+    "transcribing": "Transcribing...",
+    "voiceListening": "Listening, go ahead...",
+    "voiceStreaming": "Recognizing, keep talking..."
   },
   "translate": {
+    "label": "Translate",
     "on": "Translation On",
     "off": "Translation Off",
     "targetLang": "Translate to",

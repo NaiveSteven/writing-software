@@ -1,15 +1,15 @@
 /**
  * 翻译 Web Worker
- * 将 ONNX 推理隔离到独立线程，彻底避免阻塞渲染主线程
- * 与主线程通过结构化消息通信，每条请求携带唯一 id 用于匹配响应
+ * 将 ONNX 推理隔离到独立线程，避免阻塞渲染主线程。
  */
 import { pipeline, env, type TranslationPipeline } from '@huggingface/transformers'
 
-/* Worker 内重新配置镜像源（Worker 是独立 JS 上下文） */
+/* Worker 是独立上下文，需要单独设置镜像源和缓存策略。 */
 env.remoteHost = 'https://hf-mirror.com'
 env.allowLocalModels = false
+env.allowRemoteModels = true
 
-/* 本身已在 Worker 线程，禁用 proxy 避免嵌套 Worker */
+/* 已经在 Worker 内，关闭 onnxruntime-web 的二级 proxy。 */
 const onnxEnv = env.backends?.onnx
 if (onnxEnv) {
   if (!onnxEnv.wasm) {
@@ -18,6 +18,9 @@ if (onnxEnv) {
     onnxEnv.wasm.proxy = false
   }
 }
+
+/** MarianMT 长文本安全分块大小 */
+const MAX_CHARS_PER_CHUNK = 400
 
 /** Worker 接收的消息类型 */
 type WorkerRequest =
@@ -34,89 +37,157 @@ type WorkerResponse =
   | { type: 'TRANSLATE_ERR'; id: number; error: string }
   | { type: 'UNLOAD_OK'; id: number }
 
-/** Worker 内部 pipeline 缓存（key: modelId） */
+/** Worker 内部 pipeline 缓存 */
 const pipelineCache = new Map<string, TranslationPipeline>()
 
 /** 向主线程发送消息 */
-function post(msg: WorkerResponse): void {
-  self.postMessage(msg)
+function post(message: WorkerResponse): void {
+  self.postMessage(message)
 }
 
-/**
- * 加载或复用已缓存的 pipeline
- * 支持多文件进度聚合（高水位线，防止进度倒退）
- */
+/** 将长文本按句界拆分为不超过 MAX_CHARS_PER_CHUNK 的小段 */
+function splitTextIntoChunks(text: string): string[] {
+  if (text.length <= MAX_CHARS_PER_CHUNK) return [text]
+
+  const parts: string[] = []
+  const sentenceRe = /[^.!?。！？\n]*[.!?。！？\n]+\s*/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = sentenceRe.exec(text)) !== null) {
+    parts.push(match[0])
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
+
+  const chunks: string[] = []
+  let current = ''
+  for (const part of parts) {
+    if (part.length > MAX_CHARS_PER_CHUNK) {
+      if (current.trim()) {
+        chunks.push(current.trim())
+        current = ''
+      }
+      for (let index = 0; index < part.length; index += MAX_CHARS_PER_CHUNK) {
+        chunks.push(part.slice(index, index + MAX_CHARS_PER_CHUNK).trim())
+      }
+    } else if (current.length + part.length > MAX_CHARS_PER_CHUNK) {
+      if (current.trim()) chunks.push(current.trim())
+      current = part
+    } else {
+      current += part
+    }
+  }
+
+  if (current.trim()) chunks.push(current.trim())
+  return chunks.filter((chunk) => chunk.length > 0)
+}
+
+/** 根据目标语言决定分块结果的拼接方式 */
+function joinTranslatedChunks(chunks: string[], modelId: string): string {
+  const tail = modelId.split('/').pop() ?? ''
+  const targetLang = tail.split('-').pop() ?? ''
+  const isCjk = ['zh', 'jap', 'ja', 'ko'].includes(targetLang)
+  const separator = isCjk ? '' : ' '
+  const joined = chunks.map((chunk) => chunk.trim()).filter(Boolean).join(separator)
+
+  if (isCjk) {
+    return joined.replace(/\s+/g, '').trim()
+  }
+
+  return joined.replace(/\s+([,.!?;:])/g, '$1').replace(/\s+/g, ' ').trim()
+}
+
+/** 加载或复用已缓存的 pipeline */
 async function ensurePipeline(
   modelId: string,
   onProgress?: (status: string, progress?: number) => void
 ): Promise<TranslationPipeline> {
-  /* 已在内存中，直接返回 */
   const cached = pipelineCache.get(modelId)
   if (cached) return cached
 
-  /* 多文件进度聚合 */
   const fileProgress = new Map<string, number>()
-  let hwm = 0 /* 高水位线 */
+  let highWaterMark = 0
 
-  const pipe = await pipeline('translation', modelId, {
-    /* q4 量化：性能/兼容性最优 */
-    dtype: 'q4',
+  const translationPipeline = await pipeline('translation', modelId, {
+    /* int8 在稳定版 ort-web 下体积和兼容性最均衡。 */
+    dtype: 'int8',
     device: 'wasm',
-    progress_callback: (p: Record<string, unknown>) => {
+    progress_callback: (progressInfo: Record<string, unknown>) => {
       if (!onProgress) return
-      const status = p.status as string
-      const file = (p.file as string) || 'default'
+
+      const status = progressInfo.status as string
+      const file = (progressInfo.file as string) || 'default'
 
       if (status === 'initiate' || status === 'download') {
         if (!fileProgress.has(file)) fileProgress.set(file, 0)
       }
 
-      if (status === 'progress' && typeof p.progress === 'number') {
-        fileProgress.set(file, p.progress as number)
+      if (status === 'progress' && typeof progressInfo.progress === 'number') {
+        fileProgress.set(file, progressInfo.progress as number)
         const denom = Math.max(fileProgress.size, 1)
-        const avg = Array.from(fileProgress.values()).reduce((a, b) => a + b, 0) / denom
-        hwm = Math.max(hwm, avg)
-        onProgress(status, hwm)
+        const average = Array.from(fileProgress.values()).reduce((sum, value) => sum + value, 0) / denom
+        highWaterMark = Math.max(highWaterMark, average)
+        onProgress(status, highWaterMark)
       } else {
-        onProgress(status, p.progress as number | undefined)
+        onProgress(status, progressInfo.progress as number | undefined)
       }
     }
   }) as TranslationPipeline
 
-  pipelineCache.set(modelId, pipe)
-  return pipe
+  pipelineCache.set(modelId, translationPipeline)
+  return translationPipeline
 }
 
-/** 消息分发（入口） */
-self.onmessage = async (e: MessageEvent<WorkerRequest>): Promise<void> => {
-  const msg = e.data
+/** 执行翻译推理 */
+async function runTranslation(text: string, modelId: string): Promise<string> {
+  const translationPipeline = await ensurePipeline(modelId)
+  const chunks = splitTextIntoChunks(text)
+  const results: string[] = []
 
-  if (msg.type === 'LOAD') {
+  for (const chunk of chunks) {
+    const output = await translationPipeline(chunk) as Array<{ translation_text: string }>
+    results.push(output[0]?.translation_text ?? '')
+  }
+
+  return joinTranslatedChunks(results, modelId)
+}
+
+/** Worker 消息入口 */
+self.onmessage = async (event: MessageEvent<WorkerRequest>): Promise<void> => {
+  const message = event.data
+
+  if (message.type === 'LOAD') {
     try {
-      await ensurePipeline(msg.modelId, (status, progress) => {
-        post({ type: 'PROGRESS', id: msg.id, modelId: msg.modelId, status, progress })
+      await ensurePipeline(message.modelId, (status, progress) => {
+        post({ type: 'PROGRESS', id: message.id, modelId: message.modelId, status, progress })
       })
-      post({ type: 'LOAD_OK', id: msg.id })
-    } catch (err) {
-      post({ type: 'LOAD_ERR', id: msg.id, error: String(err) })
+      post({ type: 'LOAD_OK', id: message.id })
+    } catch (error) {
+      post({ type: 'LOAD_ERR', id: message.id, error: String(error) })
     }
+    return
+  }
 
-  } else if (msg.type === 'TRANSLATE') {
+  if (message.type === 'TRANSLATE') {
     try {
-      /* 若 pipeline 未加载则先加载（静默，无进度上报） */
-      const pipe = await ensurePipeline(msg.modelId)
-      const output = await pipe(msg.text) as Array<{ translation_text: string }>
-      post({ type: 'TRANSLATE_OK', id: msg.id, result: output[0].translation_text })
-    } catch (err) {
-      post({ type: 'TRANSLATE_ERR', id: msg.id, error: String(err) })
+      const result = await runTranslation(message.text, message.modelId)
+      post({ type: 'TRANSLATE_OK', id: message.id, result })
+    } catch (error) {
+      post({ type: 'TRANSLATE_ERR', id: message.id, error: String(error) })
     }
+    return
+  }
 
-  } else if (msg.type === 'UNLOAD') {
-    const pipe = pipelineCache.get(msg.modelId)
-    if (pipe) {
-      try { await pipe.dispose() } catch { /* ignore dispose errors */ }
-      pipelineCache.delete(msg.modelId)
+  if (message.type === 'UNLOAD') {
+    const translationPipeline = pipelineCache.get(message.modelId)
+    if (translationPipeline) {
+      try {
+        await translationPipeline.dispose()
+      } catch {
+        /* ignore dispose errors */
+      }
+      pipelineCache.delete(message.modelId)
     }
-    post({ type: 'UNLOAD_OK', id: msg.id })
+    post({ type: 'UNLOAD_OK', id: message.id })
   }
 }

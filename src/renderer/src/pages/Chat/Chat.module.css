@@ -50,24 +50,150 @@
   background: var(--glass-bg-hover);
 }
 
-/* --- 翻译控制面板 (内嵌输入区域上方) --- */
-.translateBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.langSelect {
+/* --- 统一工具栏（麦克风 + 翻译 + 发送，单行排列） --- */
+.toolbar {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 7px 10px 9px;
+  border-top: 1px solid var(--color-divider);
 }
 
-.langLabel {
-  font-size: 13px;
+/* 麦克风按钮 */
+.micBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.micBtn:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  color: var(--color-primary);
+}
+
+.micBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 录音激活态：自动宽度容纳计时器，红色呼吸光环 */
+.micActive {
+  width: auto !important;
+  min-width: 30px !important;
+  padding: 0 10px !important;
+  border-radius: 20px !important;
+  background: rgba(255, 59, 48, 0.1) !important;
+  border-color: rgba(255, 59, 48, 0.35) !important;
+  color: #ff3b30 !important;
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.3); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 59, 48, 0); }
+}
+
+/* 录音中展示：红点 + 计时 */
+.micRecording {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.micDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff3b30;
+  animation: dotBlink 1s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.micTimer {
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #ff3b30;
+  letter-spacing: 0.02em;
+}
+
+/* 工具栏竖向分隔线 */
+.toolDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--color-divider);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+/* 翻译控件组：切换按钮 + 语言选择器 */
+.translateGroup {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.translateToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.translateToggle:hover {
+  background: var(--glass-bg);
+  color: var(--color-text-secondary);
+  border-color: var(--glass-border);
+}
+
+/* 翻译已开启 */
+.translateOn {
+  color: var(--color-primary) !important;
+  background: rgba(var(--color-primary-rgb, 0, 122, 255), 0.08) !important;
+  border-color: rgba(var(--color-primary-rgb, 0, 122, 255), 0.2) !important;
+}
+
+/* 语言选择器紧凑版（工具栏内嵌尺寸），仅覆盖尺寸和色调，不破坏 dropdown arrow */
+.langSelectCompact {
+  padding: 4px 26px 4px 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  /* 用 background-color 而非 background 短写，保留父类 background-image（下拉箭头 SVG） */
+  background-color: rgba(0, 122, 255, 0.06) !important;
+  border-color: rgba(0, 122, 255, 0.22) !important;
+  color: var(--color-primary) !important;
+}
+
+/* 弹性空白 */
+.toolSpacer {
+  flex: 1;
 }
 
 /* --- 消息列表区域 --- */
@@ -105,8 +231,37 @@
 
 /* --- 输入区域 --- */
 .inputArea {
-  padding: 10px 20px 20px;
+  padding: 6px 20px 20px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 拖拽调整手柄：坐落在 inputArea 顶部，支持 ns-resize */
+.resizeHandle {
+  height: 8px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.resizeHandle::before {
+  content: '';
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-divider);
+  transition: all 0.15s ease;
+}
+
+.resizeHandle:hover::before {
+  width: 48px;
+  background: var(--color-primary);
+  opacity: 0.7;
 }
 
 /* 输入卡片：全宽玻璃容器，内含 textarea + 操作行 */
@@ -141,33 +296,34 @@
   resize: none;
 }
 
-/* 底部操作行：语音 | 提示文字 | 发送 */
-.inputActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px 10px;
-  border-top: 1px solid var(--color-divider);
+/* 拖拽模式下的文本框：充满副余空间 */
+.mainTextareaExpanded {
+  flex: 1 !important;
+  max-height: none !important;
+  min-height: 0 !important;
 }
 
-/* 提示文字（中间弹性占位区） */
-.inputHint {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.shortcutHint {
+/* 状态提示文字 */
+.hintShortcut {
   font-size: 11px;
   color: var(--color-text-tertiary);
+  margin-right: 4px;
 }
 
-.transcribingHint {
+.hintTranscribing {
   font-size: 12px;
   color: var(--color-primary);
   font-weight: 500;
   animation: blink 1.2s ease-in-out infinite;
+  margin-right: 4px;
+}
+
+.hintRecording {
+  font-size: 12px;
+  color: #ff3b30;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-right: 4px;
 }
 
 @keyframes blink {
