@@ -1,0 +1,61 @@
+appId: com.auramarker.studio
+productName: Aura Marker Studio
+compression: normal
+asar: true
+npmRebuild: false
+nodeGypRebuild: false
+
+directories:
+  output: release/${version}
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+  - node_modules/**/*
+  - '!**/*.map'
+  - '!**/{test,tests}/**'
+  - '!**/coverage/**'
+  - '!**/.cache/**'
+  - '!**/Cache/**'
+  - '!**/GPUCache/**'
+  - '!**/Code Cache/**'
+  - '!**/models/**'
+  - '!**/hf-cache/**'
+  - '!**/huggingface/**'
+
+extraMetadata:
+  main: out/main/index.js
+
+mac:
+  category: public.app-category.productivity
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  identity: null
+  hardenedRuntime: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: 需要麦克风权限进行本地语音转写。
+
+dmg:
+  sign: false
+  writeUpdateInfo: false
+
+win:
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: ${productName}

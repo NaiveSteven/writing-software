@@ -19,7 +19,7 @@ interface UseAudioRecorderReturn extends AudioRecorderState {
   startRecording: () => Promise<void>
   /** 停止录音并返回音频数据 */
   stopRecording: () => Promise<Float32Array | null>
-  /** 获取当前录音的完整音频快照（不停止录音），用于流式识别 */
+  /** 获取当前录音的完整音频快照（不停止录音），用于停录前抢先发起整段识别 */
   getCurrentAudio: () => Float32Array | null
 }
 

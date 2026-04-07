@@ -1,0 +1,168 @@
+.dock {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 92%, transparent);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.08)),
+    color-mix(in srgb, var(--glass-bg) 96%, transparent);
+  backdrop-filter: blur(22px) saturate(1.65);
+  -webkit-backdrop-filter: blur(22px) saturate(1.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04),
+    0 14px 34px rgba(17, 24, 39, 0.12);
+}
+
+.action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-on-bg);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.action:hover {
+  background: color-mix(in srgb, var(--glass-bg-hover) 86%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateY(-0.5px);
+}
+
+.action:active {
+  transform: translateY(0);
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  background: color-mix(in srgb, var(--color-divider) 80%, transparent);
+  flex-shrink: 0;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.themeStack {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.themeIcon {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity 200ms ease,
+    transform 240ms ease,
+    color 200ms ease;
+}
+
+.themeIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sunIcon {
+  color: #c67a09;
+}
+
+.moonIcon {
+  color: #1f2937;
+}
+
+.action[data-theme-mode='light'] .sunIcon {
+  opacity: 0;
+  transform: translateY(3px) scale(0.82) rotate(-20deg);
+}
+
+.action[data-theme-mode='light'] .moonIcon {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(0deg);
+}
+
+.action[data-theme-mode='dark'] .sunIcon {
+  opacity: 1;
+  transform: translateY(0) scale(1) rotate(0deg);
+}
+
+.action[data-theme-mode='dark'] .moonIcon {
+  opacity: 0;
+  transform: translateY(-3px) scale(0.82) rotate(18deg);
+}
+
+.langAction {
+  min-width: 42px;
+  padding: 0 12px;
+}
+
+.langText {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+:global([data-theme='dark']) .dock {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+    rgba(18, 25, 36, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 18px 34px rgba(0, 0, 0, 0.28);
+}
+
+:global([data-theme='dark']) .moonIcon {
+  color: #dbe7f5;
+}
+
+:global([data-theme='dark']) .sunIcon {
+  color: #ffd166;
+}
+
+@media (max-width: 640px) {
+  .dock {
+    padding: 3px;
+  }
+
+  .action {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+  }
+
+  .langAction {
+    min-width: 38px;
+    padding: 0 10px;
+  }
+}

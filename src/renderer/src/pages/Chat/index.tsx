@@ -6,10 +6,10 @@ import { ChatInput } from './ChatInput'
 import { ContextMenu, type MenuItem } from '../../components/ContextMenu'
 import { MessageDetailModal } from '../../components/MessageDetailModal'
 import { ModelDownloadDialog, type DialogPhase, type DialogAction } from '../../components/ModelDownloadDialog'
+import { HeaderActionBar } from '../../components/HeaderActionBar'
 import { toast } from '../../components/Toast'
 import { useMessageStore } from '../../stores/message-store'
 import { useSettingStore } from '../../stores/setting-store'
-import { useShortcuts } from '../../hooks/useShortcuts'
 import { detectLanguage } from '../../utils/language-detect'
 import {
   transcribeAudio, initWhisper, isWhisperCached, getWhisperStatus,
@@ -405,64 +405,28 @@ export const ChatPage: React.FC = () => {
    * 语音识别结束回调：最终转写全量音频并返回结果
    */
   const handleTranscribeVoice = useCallback(
-    async (
-      audioData: Float32Array,
-      options?: { background?: boolean }
-    ): Promise<string | null> => {
+    async (audioData: Float32Array): Promise<string | null> => {
       const whisperReady = await ensureWhisperModel()
       if (!whisperReady) return null
 
-      const shouldBlockUi = !options?.background
-
       try {
-        if (shouldBlockUi) setTranscribing(true)
+        setTranscribing(true)
         const langHint = getWhisperLanguageHint(uiLang)
         const text = await transcribeAudio(audioData, langHint)
         if (!text) {
-          if (shouldBlockUi) toast.warning(t('chat.voiceEmpty'))
+          toast.warning(t('chat.voiceEmpty'))
           return null
         }
         return text
       } catch (err) {
         console.error('Voice transcription failed:', err)
-        if (shouldBlockUi) toast.error(t('chat.voiceError'))
+        toast.error(t('chat.voiceError'))
         return null
       } finally {
-        if (shouldBlockUi) setTranscribing(false)
+        setTranscribing(false)
       }
     },
     [uiLang, t, ensureWhisperModel]
-  )
-
-  /**
-   * 分段层流式识别回调
-   *
-   * 策略：每次只转写【上次识别位置 → 当前】的新增顟段，将识别结果 **追加**到输入框
-   * 而非替换全文 —— 從根本上解决“盖写陆段文字”问题。
-   *
-   * @param newAudio   本次待识别的新增片段（不包含已提交的旧音频）
-   * @param prevText   目前输入框中已有的文字（前缀）
-   * @returns          新的完整文字（prevText + 本次识别片段）
-   */
-  const handleSegmentTranscribe = useCallback(
-    async (newAudio: Float32Array, prevText: string): Promise<string | null> => {
-      if (getWhisperStatus() !== 'ready' || getLoadedWhisperModelId() !== speechModelId) return null
-      /* 新增片段过短，跳过 */
-      if (newAudio.length / 16000 < 1.0) return null
-      try {
-        const langHint = getWhisperLanguageHint(uiLang)
-        const segText = await transcribeAudio(newAudio, langHint)
-        if (!segText) return null
-        /* 拼接：已有文字 + 空格 + 新识别组 */
-        const joined = prevText
-          ? prevText.trimEnd() + ' ' + segText.trim()
-          : segText.trim()
-        return joined
-      } catch {
-        return null
-      }
-    },
-    [speechModelId, uiLang]
   )
 
   /** 重新翻译历史消息 */
@@ -488,11 +452,6 @@ export const ChatPage: React.FC = () => {
     },
     [messages, updateTranslation, t, ensureTranslateModels, markTranslating]
   )
-
-  /* 注册快捷键 */
-  useShortcuts({
-    onVoiceToggle: () => {}
-  })
 
   /**
    * 翻译开关：开启时校验双向翻译模型 (en↔target)
@@ -635,33 +594,16 @@ export const ChatPage: React.FC = () => {
       <header className={`${styles.titleBar} drag-region`}>
         <h1 className={styles.title}>{t('app.name')}</h1>
         <div className={`${styles.headerActions} no-drag`}>
-          {/* 设置按钮 */}
-          <button
-            type="button"
-            className={styles.langToggle}
-            onClick={() => setShowSettings(true)}
-            title={t('settings.title')}
-          >
-            ⚙️
-          </button>
-          {/* 主题切换 */}
-          <button
-            type="button"
-            className={styles.langToggle}
-            onClick={toggleTheme}
-            title={t(theme === 'light' ? 'settings.themeDark' : 'settings.themeLight')}
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
-          {/* 界面语言切换 */}
-          <button
-            type="button"
-            className={styles.langToggle}
-            onClick={toggleUiLang}
-            title={t('settings.language')}
-          >
-            {uiLang === 'zh-CN' ? 'EN' : '中'}
-          </button>
+          <HeaderActionBar
+            theme={theme}
+            uiLang={uiLang}
+            onOpenSettings={() => setShowSettings(true)}
+            onToggleTheme={toggleTheme}
+            onToggleUiLang={toggleUiLang}
+            settingsTitle={t('settings.title')}
+            themeTitle={t(theme === 'light' ? 'settings.themeDark' : 'settings.themeLight')}
+            languageTitle={t('settings.language')}
+          />
         </div>
       </header>
 
@@ -680,7 +622,6 @@ export const ChatPage: React.FC = () => {
       <ChatInput
         onSendText={handleSendText}
         onTranscribeVoice={handleTranscribeVoice}
-        onSegmentTranscribe={handleSegmentTranscribe}
         onBeforeVoice={ensureWhisperModel}
         disabled={transcribing}
         translateEnabled={translateEnabled}

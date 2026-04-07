@@ -1,11 +1,15 @@
 {
   "name": "writing-software",
   "version": "1.0.0",
+  "productName": "Aura Marker Studio",
   "description": "Real-time conversation translation desktop app",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "dist": "pnpm build && electron-builder --config electron-builder.yml --publish never",
+    "dist:mac": "pnpm build && electron-builder --config electron-builder.yml --mac dmg --arm64 --publish never",
+    "dist:win": "pnpm build && electron-builder --config electron-builder.yml --win nsis --x64 --publish never",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
@@ -38,6 +42,7 @@
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.27",
     "electron": "^41.1.1",
+    "electron-builder": "^25.1.8",
     "electron-vite": "^5.0.0",
     "jsdom": "^29.0.1",
     "postcss": "^8.5.8",

@@ -1,7 +1,12 @@
 node_modules/
 dist/
+release/
 out/
 *.log
 .DS_Store
 Thumbs.db
-README.md
+builder-effective-config.yaml
+builder-debug.yml
+content.md
+ms.md
+requirements.md
