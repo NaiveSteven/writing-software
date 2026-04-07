@@ -23,7 +23,7 @@
     "retranslate": "重新翻译",
     "copy": "复制",
     "copied": "已复制",
-    "voiceModelReady": "录音模型准备就绪，再次点击麦克开始录音",
+    "voiceModelReady": "{{model}} 已就绪，再点麦克开始录音",
     "transcribing": "识别中...",
     "voiceListening": "正在听，说吧...",
     "voiceStreaming": "识别中，继续说..."
@@ -50,6 +50,7 @@
     "copied": "已复制！"
   },
   "language": {
+    "auto": "自动",
     "zh": "中文",
     "en": "英文",
     "ja": "日文",
@@ -103,8 +104,17 @@
     "notInstalled": "未安装",
     "install": "安装",
     "uninstall": "卸载",
+    "useNow": "立即使用",
+    "inUse": "当前使用",
+    "translateModelEastAsia": "日韩增强多语模型",
     "loading": "检查模型状态...",
     "speechModelHint": "语音识别用，录音后转文字",
-    "translateModelHint": "翻译用，按语言对安装"
+    "translateModelHint": "翻译用，常规按方向装，日韩走增强模型",
+    "speechTiny": "Whisper Tiny",
+    "speechBase": "Whisper Base",
+    "speechSmall": "Whisper Small",
+    "speechTinyHint": "最快，适合试速度",
+    "speechBaseHint": "更稳，日常够用",
+    "speechSmallHint": "最准，但会更慢"
   }
 }

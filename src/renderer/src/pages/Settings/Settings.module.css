@@ -103,6 +103,14 @@
   box-shadow: var(--glass-shadow);
 }
 
+.modelMetaStack {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .modelMeta {
   flex: 1;
   display: flex;
@@ -118,6 +126,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.modelDesc {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--color-text-tertiary);
 }
 
 .modelSize {
@@ -145,6 +159,18 @@
 .notInstalled {
   background: var(--color-danger-light);
   color: var(--color-danger);
+}
+
+.activeBadge {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 /* --- 操作按钮 --- */
@@ -182,6 +208,24 @@
 .dangerBtn:hover:not(:disabled) {
   background: var(--color-copy-bg-hover);
   color: var(--color-danger);
+}
+
+.secondaryBtn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  color: var(--color-text);
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* --- 模型网格 --- */

@@ -5,16 +5,30 @@ import {
   getAllTranslateModelStatus,
   downloadModel,
   deleteModelCache,
+  getTranslateModelMeta,
   setTranslateProgressCallback,
   type ModelInfo
 } from '../../services/translate'
 import {
-  WHISPER_MODEL_ID,
-  isWhisperCached,
+  getAllWhisperModelStatus,
   initWhisper,
-  deleteWhisperCache
+  deleteWhisperCache,
+  type WhisperModelStatusInfo
 } from '../../services/whisper'
+import {
+  getWhisperModelMeta,
+  type WhisperModelId
+} from '../../services/whisper-models'
+import { useSettingStore } from '../../stores/setting-store'
 import { ModelDownloadDialog, type DialogPhase, type DialogAction } from '../../components/ModelDownloadDialog'
+import { resolveLocalizedLabel } from '../../utils/localize-label'
+
+/** 语音模型展示状态 */
+interface SpeechModelInfo extends WhisperModelStatusInfo {
+  labelKey: string
+  hintKey: string
+  sizeHint: string
+}
 
 /** 模型操作中状态 */
 interface ModelAction {
@@ -42,12 +56,6 @@ const DIALOG_INIT: LocalDialogState = {
   progress: 0
 }
 
-/** Whisper small q4 量化大小 */
-const WHISPER_SIZE_HINT = '~280 MB'
-
-/** opus-mt int8 量化单模型大小（encoder + decoder 共约 105MB） */
-const TRANSLATE_SIZE_HINT = '~105 MB'
-
 /**
  * 设置页面
  * 展示所有模型安装状态，支持安装/卸载
@@ -55,14 +63,15 @@ const TRANSLATE_SIZE_HINT = '~105 MB'
  */
 export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { t } = useTranslation()
+  const { speechModelId, setSpeechModelId } = useSettingStore()
 
   /** macOS：红绿灯在左侧，标题栏需要 80px 左缩进，返回按钮放右侧 */
   const isMac = typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac')
 
   /* 翻译模型列表 */
   const [translateModels, setTranslateModels] = useState<ModelInfo[]>([])
-  /* Whisper 模型已缓存 */
-  const [whisperCached, setWhisperCached] = useState(false)
+  /* Whisper 模型列表 */
+  const [whisperModels, setWhisperModels] = useState<SpeechModelInfo[]>([])
   /* 当前操作中的模型 */
   const [action, setAction] = useState<ModelAction | null>(null)
   /* 是否初始加载完 */
@@ -76,12 +85,17 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
   /** 刷新模型状态 */
   const refreshModels = useCallback(async () => {
-    const [tModels, wCached] = await Promise.all([
+    const [tModels, whisperStatuses] = await Promise.all([
       getAllTranslateModelStatus(),
-      isWhisperCached()
+      getAllWhisperModelStatus()
     ])
     setTranslateModels(tModels)
-    setWhisperCached(wCached)
+    setWhisperModels(
+      whisperStatuses.map((status) => ({
+        ...status,
+        ...getWhisperModelMeta(status.modelId)
+      }))
+    )
     setLoaded(true)
   }, [])
 
@@ -115,18 +129,28 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     setAction(null)
   }, [])
 
+  /** 统一注册一次需要用户确认的模型操作。 */
+  const scheduleDialogAction = useCallback((
+    actionType: DialogAction,
+    modelName: string,
+    task: () => Promise<void>
+  ): void => {
+    setDialog({
+      visible: true,
+      phase: 'confirm',
+      action: actionType,
+      modelName,
+      progress: 0
+    })
+    pendingRef.current = task
+    retryRef.current = task
+  }, [])
+
   /**
    * 安装翻译模型（先弹确认，确认后下载）
    */
   const handleInstallTranslate = useCallback(async (modelId: string) => {
-    /* 弹确认弹窗 */
-    setDialog({
-      visible: true,
-      phase: 'confirm',
-      action: 'install',
-      modelName: modelId,
-      progress: 0
-    })
+    const modelName = resolveLocalizedLabel(getTranslateModelMeta(modelId), modelId, t)
 
     /** 执行下载（可被重试调用） */
     const doInstall = async (): Promise<void> => {
@@ -157,22 +181,14 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    /* 保存为待执行和重试函数 */
-    pendingRef.current = doInstall
-    retryRef.current = doInstall
-  }, [refreshModels])
+    scheduleDialogAction('install', modelName, doInstall)
+  }, [refreshModels, scheduleDialogAction, t])
 
   /**
    * 卸载翻译模型（弹确认后执行）
    */
   const handleUninstallTranslate = useCallback(async (modelId: string) => {
-    setDialog({
-      visible: true,
-      phase: 'confirm',
-      action: 'uninstall',
-      modelName: modelId,
-      progress: 0
-    })
+    const modelName = resolveLocalizedLabel(getTranslateModelMeta(modelId), modelId, t)
 
     const doUninstall = async (): Promise<void> => {
       setAction({ modelId, type: 'uninstall', progress: 0 })
@@ -189,22 +205,16 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    pendingRef.current = doUninstall
-    retryRef.current = doUninstall
-  }, [refreshModels])
+    scheduleDialogAction('uninstall', modelName, doUninstall)
+  }, [refreshModels, scheduleDialogAction, t])
 
   /** 安装 Whisper 模型 */
-  const handleInstallWhisper = useCallback(async () => {
-    setDialog({
-      visible: true,
-      phase: 'confirm',
-      action: 'install',
-      modelName: WHISPER_MODEL_ID,
-      progress: 0
-    })
+  const handleInstallWhisper = useCallback(async (modelId: WhisperModelId) => {
+    const modelMeta = getWhisperModelMeta(modelId)
+    const modelName = resolveLocalizedLabel(modelMeta, modelId, t)
 
     const doInstall = async (): Promise<void> => {
-      setAction({ modelId: WHISPER_MODEL_ID, type: 'install', progress: 0 })
+      setAction({ modelId, type: 'install', progress: 0 })
       try {
         await initWhisper((p) => {
           if (p.status === 'progress' && p.progress !== undefined) {
@@ -212,7 +222,7 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             setAction((prev) => prev ? { ...prev, progress: pct } : null)
             setDialog((d) => ({ ...d, progress: pct }))
           }
-        })
+        }, modelId)
         await refreshModels()
         setDialog((d) => ({ ...d, phase: 'done' }))
         retryRef.current = null
@@ -226,24 +236,18 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    pendingRef.current = doInstall
-    retryRef.current = doInstall
-  }, [refreshModels])
+    scheduleDialogAction('install', modelName, doInstall)
+  }, [refreshModels, scheduleDialogAction, t])
 
   /** 卸载 Whisper 模型 */
-  const handleUninstallWhisper = useCallback(async () => {
-    setDialog({
-      visible: true,
-      phase: 'confirm',
-      action: 'uninstall',
-      modelName: WHISPER_MODEL_ID,
-      progress: 0
-    })
+  const handleUninstallWhisper = useCallback(async (modelId: WhisperModelId) => {
+    const modelMeta = getWhisperModelMeta(modelId)
+    const modelName = resolveLocalizedLabel(modelMeta, modelId, t)
 
     const doUninstall = async (): Promise<void> => {
-      setAction({ modelId: WHISPER_MODEL_ID, type: 'uninstall', progress: 0 })
+      setAction({ modelId, type: 'uninstall', progress: 0 })
       try {
-        await deleteWhisperCache()
+        await deleteWhisperCache(modelId)
         await refreshModels()
         setDialog((d) => ({ ...d, phase: 'done' }))
         retryRef.current = null
@@ -255,9 +259,8 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       }
     }
 
-    pendingRef.current = doUninstall
-    retryRef.current = doUninstall
-  }, [refreshModels])
+    scheduleDialogAction('uninstall', modelName, doUninstall)
+  }, [refreshModels, scheduleDialogAction, t])
 
   /** 判断某模型是否正在操作中 */
   const isActioning = (modelId: string): boolean => action?.modelId === modelId
@@ -301,27 +304,57 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           <h2 className={styles.sectionTitle}>{t('model.speechModel')}</h2>
           <p className={styles.sectionHint}>{t('settings.speechModelHint')}</p>
 
-          <div className={styles.modelRow}>
-            <div className={styles.modelMeta}>
-              <span className={styles.modelName}>{WHISPER_MODEL_ID}</span>
-              <span className={styles.modelSize}>{WHISPER_SIZE_HINT}</span>
+          {whisperModels.map((model) => (
+            <div key={model.modelId} className={styles.modelRow}>
+              <div className={styles.modelMetaStack}>
+                <div className={styles.modelMeta}>
+                  <span className={styles.modelName}>{resolveLocalizedLabel(model, model.modelId, t)}</span>
+                  <span className={styles.modelSize}>{model.sizeHint}</span>
+                </div>
+                <p className={styles.modelDesc}>{t(model.hintKey)}</p>
+              </div>
+
+              <div className={styles.badgeGroup}>
+                <span className={`${styles.badge} ${model.cached ? styles.installed : styles.notInstalled}`}>
+                  {model.cached ? t('settings.installed') : t('settings.notInstalled')}
+                </span>
+                {speechModelId === model.modelId && (
+                  <span className={`${styles.badge} ${styles.activeBadge}`}>
+                    {t('settings.inUse')}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.actionGroup}>
+                {model.cached && (
+                  <button
+                    type="button"
+                    className={`${styles.actionBtn} ${styles.secondaryBtn}`}
+                    onClick={() => setSpeechModelId(model.modelId)}
+                    disabled={!!action || speechModelId === model.modelId}
+                  >
+                    {speechModelId === model.modelId ? t('settings.inUse') : t('settings.useNow')}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${model.cached ? styles.dangerBtn : styles.primaryBtn}`}
+                  onClick={() =>
+                    model.cached
+                      ? handleUninstallWhisper(model.modelId)
+                      : handleInstallWhisper(model.modelId)
+                  }
+                  disabled={!!action}
+                >
+                  {isActioning(model.modelId)
+                    ? t('model.progress', { percent: Math.round(action?.progress ?? 0) })
+                    : model.cached
+                      ? t('settings.uninstall')
+                      : t('settings.install')}
+                </button>
+              </div>
             </div>
-            <span className={`${styles.badge} ${whisperCached ? styles.installed : styles.notInstalled}`}>
-              {whisperCached ? t('settings.installed') : t('settings.notInstalled')}
-            </span>
-            <button
-              type="button"
-              className={`${styles.actionBtn} ${whisperCached ? styles.dangerBtn : styles.primaryBtn}`}
-              onClick={whisperCached ? handleUninstallWhisper : handleInstallWhisper}
-              disabled={!!action}
-            >
-              {isActioning(WHISPER_MODEL_ID)
-                ? t('model.progress', { percent: Math.round(action?.progress ?? 0) })
-                : whisperCached
-                  ? t('settings.uninstall')
-                  : t('settings.install')}
-            </button>
-          </div>
+          ))}
         </section>
 
         {/* 翻译模型列表 */}
@@ -337,9 +370,9 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <div key={m.modelId} className={styles.modelRow}>
                   <div className={styles.modelMeta}>
                     <span className={styles.modelName}>
-                      {m.langPair.replace('-', ' → ')}
+                      {resolveLocalizedLabel(m, m.modelId, t)}
                     </span>
-                    <span className={styles.modelSize}>{TRANSLATE_SIZE_HINT}</span>
+                    <span className={styles.modelSize}>{m.sizeHint}</span>
                   </div>
                   <span className={`${styles.badge} ${m.cached ? styles.installed : styles.notInstalled}`}>
                     {m.cached ? t('settings.installed') : t('settings.notInstalled')}

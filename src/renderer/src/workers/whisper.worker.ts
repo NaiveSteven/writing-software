@@ -55,6 +55,15 @@ const MIN_AUDIO_DURATION_SEC = 0.5
 /** 静音 RMS 阈值 */
 const SILENCE_THRESHOLD = 0.01
 
+/** 最少输出 token 数，避免极短句被过早截断 */
+const MIN_NEW_TOKENS = 32
+
+/** 最多输出 token 数，限制短语音的解码时长 */
+const MAX_NEW_TOKENS = 96
+
+/** 每秒语音允许生成的 token 粗略上限 */
+const TOKENS_PER_SECOND = 8
+
 /** 判断音频是否全为静音 */
 function isAudioSilent(audio: Float32Array): boolean {
   let sumSq = 0
@@ -62,6 +71,23 @@ function isAudioSilent(audio: Float32Array): boolean {
     sumSq += audio[i] * audio[i]
   }
   return Math.sqrt(sumSq / audio.length) < SILENCE_THRESHOLD
+}
+
+/** 为当前音频长度生成较保守的 Whisper 解码参数 */
+function buildTranscribeOptions(audio: Float32Array, language?: string): {
+  task: 'transcribe'
+  language?: string
+  return_timestamps: false
+  max_new_tokens: number
+} {
+  const durationSec = audio.length / 16000
+  const estimatedTokens = Math.ceil(durationSec * TOKENS_PER_SECOND)
+  return {
+    task: 'transcribe',
+    language,
+    return_timestamps: false,
+    max_new_tokens: Math.max(MIN_NEW_TOKENS, Math.min(MAX_NEW_TOKENS, estimatedTokens))
+  }
 }
 
 /**
@@ -143,11 +169,10 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     }
 
     try {
-      const result = (await whisperPipeline(audio, {
-        task: 'transcribe',
-        language,
-        return_timestamps: false
-      })) as AutomaticSpeechRecognitionOutput
+      const result = (await whisperPipeline(
+        audio,
+        buildTranscribeOptions(audio, language)
+      )) as AutomaticSpeechRecognitionOutput
       post({ type: 'TRANSCRIBE_OK', id, text: result.text.trim() })
     } catch (err) {
       post({

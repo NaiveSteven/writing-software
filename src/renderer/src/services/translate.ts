@@ -4,13 +4,27 @@
  */
 
 import {
-  MODEL_MAP,
+  getTranslateModelCatalog,
   getRequiredModelIds,
   isTranslatePairSupported,
   resolveTranslateRoute,
+  type TranslateModelRequest,
 } from './translate-route'
 
-export { MODEL_MAP, getRequiredModelIds, isTranslatePairSupported } from './translate-route'
+export {
+  EAST_ASIA_MODEL_ID,
+  MODEL_MAP,
+  getRequiredModelIds,
+  getTranslateModelCatalog,
+  getTranslateModelMeta,
+  isTranslatePairSupported
+} from './translate-route'
+
+/** q8 翻译模型必须具备的核心 ONNX 文件。 */
+const REQUIRED_TRANSLATE_ONNX_FILES = [
+  'onnx/encoder_model_quantized.onnx',
+  'onnx/decoder_model_merged_quantized.onnx'
+] as const
 
 /** 翻译进度回调（聚合后的总进度） */
 export type TranslateProgressCallback = (progress: {
@@ -24,8 +38,12 @@ export type TranslateProgressCallback = (progress: {
 export interface ModelInfo {
   /** 模型 ID */
   modelId: string
-  /** 语言对描述 (用于展示) */
-  langPair: string
+  /** 展示名称 */
+  label: string
+  /** 可选国际化键 */
+  labelKey?: string
+  /** 体积提示 */
+  sizeHint: string
   /** 是否已缓存到浏览器 */
   cached: boolean
 }
@@ -48,12 +66,14 @@ async function isModelCached(modelId: string): Promise<boolean> {
     for (const name of cacheNames) {
       const cache = await caches.open(name)
       const keys = await cache.keys()
-      const hasOnnx = keys.some((request) => {
-        const url = request.url
-        const matchesModel = url.includes(modelId.replace('/', '%2F')) || url.includes(modelId)
-        return matchesModel && url.endsWith('.onnx')
+      const hasAllRequiredFiles = REQUIRED_TRANSLATE_ONNX_FILES.every((fileName) => {
+        return keys.some((request) => {
+          const url = request.url
+          const matchesModel = url.includes(modelId.replace('/', '%2F')) || url.includes(modelId)
+          return matchesModel && url.endsWith(fileName)
+        })
       })
-      if (hasOnnx) return true
+      if (hasAllRequiredFiles) return true
     }
     return false
   } catch {
@@ -63,13 +83,11 @@ async function isModelCached(modelId: string): Promise<boolean> {
 
 /** 获取所有翻译模型状态 */
 export async function getAllTranslateModelStatus(): Promise<ModelInfo[]> {
-  const seen = new Set<string>()
   const result: ModelInfo[] = []
-  for (const [langPair, modelId] of Object.entries(MODEL_MAP)) {
-    if (seen.has(modelId)) continue
-    seen.add(modelId)
+  for (const meta of getTranslateModelCatalog()) {
+    const { modelId } = meta
     const cached = await isModelCached(modelId)
-    result.push({ modelId, langPair, cached })
+    result.push({ ...meta, cached })
   }
   return result
 }
@@ -116,6 +134,13 @@ type WorkerResponse =
 interface PendingCall {
   resolve: (value: unknown) => void
   reject: (reason: unknown) => void
+}
+
+/** Worker 执行参数 */
+interface WorkerTranslateOptions {
+  runtime: 'marian' | 'nllb'
+  srcLang?: string
+  tgtLang?: string
 }
 
 /** 翻译 Worker 客户端 */
@@ -196,11 +221,11 @@ class TranslateWorkerClient {
   }
 
   /** 执行翻译推理 */
-  translateWith(text: string, modelId: string): Promise<string> {
+  translateWith(text: string, modelId: string, options: WorkerTranslateOptions): Promise<string> {
     return new Promise((resolve, reject) => {
       const id = this.nextId++
       this.pending.set(id, { resolve: (value) => resolve(value as string), reject })
-      this.getWorker().postMessage({ type: 'TRANSLATE', id, text, modelId })
+      this.getWorker().postMessage({ type: 'TRANSLATE', id, text, modelId, options })
     })
   }
 
@@ -261,8 +286,12 @@ export async function deleteModelCache(modelId: string): Promise<void> {
 }
 
 /** 使用单个模型执行翻译 */
-async function runTranslation(text: string, modelId: string): Promise<string> {
-  return workerClient.translateWith(text, modelId)
+async function runTranslation(text: string, model: TranslateModelRequest): Promise<string> {
+  return workerClient.translateWith(text, model.modelId, {
+    runtime: model.runtime,
+    srcLang: model.srcLang,
+    tgtLang: model.tgtLang
+  })
 }
 
 /** 翻译文本 */
@@ -277,10 +306,10 @@ export async function translateText(
     case 'same':
       return text
     case 'direct':
-      return runTranslation(text, route.modelId)
+      return runTranslation(text, route.model)
     case 'bridge': {
-      const englishText = await runTranslation(text, route.toEnModelId)
-      return runTranslation(englishText, route.fromEnModelId)
+      const englishText = await runTranslation(text, route.toEnModel)
+      return runTranslation(englishText, route.fromEnModel)
     }
     case 'unsupported':
       throw new Error(`Unsupported language pair: ${sourceLang} → ${targetLang}`)

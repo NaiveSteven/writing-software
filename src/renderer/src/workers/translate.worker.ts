@@ -19,13 +19,23 @@ if (onnxEnv) {
   }
 }
 
-/** MarianMT 长文本安全分块大小 */
+/** 翻译模型长文本安全分块大小。 */
 const MAX_CHARS_PER_CHUNK = 400
 
 /** Worker 接收的消息类型 */
 type WorkerRequest =
   | { type: 'LOAD'; id: number; modelId: string }
-  | { type: 'TRANSLATE'; id: number; text: string; modelId: string }
+  | {
+      type: 'TRANSLATE'
+      id: number
+      text: string
+      modelId: string
+      options: {
+        runtime: 'marian' | 'nllb'
+        srcLang?: string
+        tgtLang?: string
+      }
+    }
   | { type: 'UNLOAD'; id: number; modelId: string }
 
 /** Worker 发出的消息类型 */
@@ -97,6 +107,16 @@ function joinTranslatedChunks(chunks: string[], modelId: string): string {
   return joined.replace(/\s+([,.!?;:])/g, '$1').replace(/\s+/g, ' ').trim()
 }
 
+/** 清理偶发残留的特殊 token，避免直接展示模型原始标记。 */
+function stripResidualSpecialTokens(text: string): string {
+  return text
+    .replace(/<pad>/g, ' ')
+    .replace(/<\/s>/g, ' ')
+    .replace(/<unk>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** 加载或复用已缓存的 pipeline */
 async function ensurePipeline(
   modelId: string,
@@ -109,8 +129,8 @@ async function ensurePipeline(
   let highWaterMark = 0
 
   const translationPipeline = await pipeline('translation', modelId, {
-    /* int8 在稳定版 ort-web 下体积和兼容性最均衡。 */
-    dtype: 'int8',
+    /* 当前翻译链路统一走 q8 + wasm，兼容 Marian / NLLB 的量化 ONNX 文件。 */
+    dtype: 'q8',
     device: 'wasm',
     progress_callback: (progressInfo: Record<string, unknown>) => {
       if (!onProgress) return
@@ -139,17 +159,33 @@ async function ensurePipeline(
 }
 
 /** 执行翻译推理 */
-async function runTranslation(text: string, modelId: string): Promise<string> {
+async function runTranslation(
+  text: string,
+  modelId: string,
+  options: {
+    runtime: 'marian' | 'nllb'
+    srcLang?: string
+    tgtLang?: string
+  }
+): Promise<string> {
   const translationPipeline = await ensurePipeline(modelId)
   const chunks = splitTextIntoChunks(text)
   const results: string[] = []
 
   for (const chunk of chunks) {
-    const output = await translationPipeline(chunk) as Array<{ translation_text: string }>
+    const output = await translationPipeline(
+      chunk,
+      options.runtime === 'nllb'
+        ? {
+            src_lang: options.srcLang,
+            tgt_lang: options.tgtLang
+          }
+        : undefined
+    ) as Array<{ translation_text: string }>
     results.push(output[0]?.translation_text ?? '')
   }
 
-  return joinTranslatedChunks(results, modelId)
+  return stripResidualSpecialTokens(joinTranslatedChunks(results, modelId))
 }
 
 /** Worker 消息入口 */
@@ -170,7 +206,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>): Promise<void> => {
 
   if (message.type === 'TRANSLATE') {
     try {
-      const result = await runTranslation(message.text, message.modelId)
+      const result = await runTranslation(message.text, message.modelId, message.options)
       post({ type: 'TRANSLATE_OK', id: message.id, result })
     } catch (error) {
       post({ type: 'TRANSLATE_ERR', id: message.id, error: String(error) })

@@ -4,13 +4,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
+  EAST_ASIA_MODEL_ID,
   MODEL_MAP,
   getRequiredModelIds,
   isTranslatePairSupported,
   areTranslateModelsCached,
   getAllTranslateModelStatus,
   isModelLoaded
-} from '@renderer/services/translate'
+} from '../../src/renderer/src/services/translate'
 
 /* mock @huggingface/transformers（避免真实下载） */
 vi.mock('@huggingface/transformers', () => ({
@@ -48,11 +49,11 @@ describe('translate service', () => {
   })
 
   describe('MODEL_MAP', () => {
-    it('包含 15 个语言对模型', () => {
-      expect(Object.keys(MODEL_MAP).length).toBe(15)
+    it('静态 Marian 映射保留 12 个语言对模型', () => {
+      expect(Object.keys(MODEL_MAP).length).toBe(12)
     })
 
-    it('每个语言对的模型 ID 以 Xenova/opus-mt 开头', () => {
+    it('每个静态语言对的模型 ID 都来自已验证的 Marian ONNX 仓库', () => {
       for (const modelId of Object.values(MODEL_MAP)) {
         expect(modelId).toMatch(/^Xenova\/opus-mt-/)
       }
@@ -61,6 +62,11 @@ describe('translate service', () => {
     it('包含中英双向翻译', () => {
       expect(MODEL_MAP['en-zh']).toBe('Xenova/opus-mt-en-zh')
       expect(MODEL_MAP['zh-en']).toBe('Xenova/opus-mt-zh-en')
+    })
+
+    it('日韩方向不再依赖旧的 OPUS 静态映射', () => {
+      expect(MODEL_MAP['en-ja']).toBeUndefined()
+      expect(MODEL_MAP['en-ko']).toBeUndefined()
     })
   })
 
@@ -74,31 +80,32 @@ describe('translate service', () => {
       expect(ids).toEqual(['Xenova/opus-mt-en-zh'])
     })
 
-    it('非直接翻译对需要 2 个模型中转', () => {
+    it('日语和韩语相关方向优先使用 NLLB 直译', () => {
       const ids = getRequiredModelIds('zh', 'ja')
-      expect(ids).toHaveLength(2)
-      expect(ids).toContain('Xenova/opus-mt-zh-en')
-      expect(ids).toContain('Xenova/opus-mt-en-jap')
+      expect(ids).toEqual([EAST_ASIA_MODEL_ID])
     })
 
-    it('en 到可直译语言只需 1 个模型', () => {
-      const langs = ['zh', 'ja', 'fr', 'de', 'ru', 'es', 'it']
+    it('en 到常规直译语言只需 1 个模型', () => {
+      const langs = ['zh', 'fr', 'de', 'ru', 'es', 'it']
       for (const lang of langs) {
         expect(getRequiredModelIds('en', lang)).toHaveLength(1)
       }
     })
 
-    it('当前不支持 en 到 ko 的本地模型路线', () => {
-      expect(getRequiredModelIds('en', 'ko')).toEqual([])
+    it('英语到日语和韩语现在都走同一套增强模型', () => {
+      expect(getRequiredModelIds('en', 'ja')).toEqual([EAST_ASIA_MODEL_ID])
+      expect(getRequiredModelIds('en', 'ko')).toEqual([EAST_ASIA_MODEL_ID])
     })
 
-    it('ko 作为源语言仍可通过英文桥接翻到其他语言', () => {
-      expect(isTranslatePairSupported('ko', 'zh')).toBe(true)
+    it('日语和韩语作为源语言可直接翻到当前支持语种', () => {
+      expect(getRequiredModelIds('ko', 'zh')).toEqual([EAST_ASIA_MODEL_ID])
+      expect(getRequiredModelIds('ja', 'fr')).toEqual([EAST_ASIA_MODEL_ID])
     })
 
-    it('ko 作为目标语言当前不支持', () => {
-      expect(isTranslatePairSupported('en', 'ko')).toBe(false)
-      expect(isTranslatePairSupported('zh', 'ko')).toBe(false)
+    it('日语和韩语作为目标语言也优先直译', () => {
+      expect(isTranslatePairSupported('en', 'ko')).toBe(true)
+      expect(isTranslatePairSupported('zh', 'ko')).toBe(true)
+      expect(getRequiredModelIds('zh', 'ko')).toEqual([EAST_ASIA_MODEL_ID])
     })
   })
 
@@ -116,35 +123,58 @@ describe('translate service', () => {
 
     it('Cache 中有对应模型时返回 true', async () => {
       mockCacheKeys.mockResolvedValue([
-        { url: 'https://huggingface.co/Xenova/opus-mt-en-zh/resolve/main/model.onnx' } as unknown as Request
+        {
+          url: 'https://huggingface.co/Xenova/opus-mt-en-zh/resolve/main/onnx/encoder_model_quantized.onnx'
+        } as unknown as Request,
+        {
+          url: 'https://huggingface.co/Xenova/opus-mt-en-zh/resolve/main/onnx/decoder_model_merged_quantized.onnx'
+        } as unknown as Request
       ])
       const result = await areTranslateModelsCached('en', 'zh')
       expect(result).toBe(true)
     })
 
-    it('中转翻译需要两个模型都缓存才返回 true', async () => {
+    it('常规 Marian 中转翻译需要两个模型都缓存才返回 true', async () => {
       /* 只缓存了一个 */
       mockCacheKeys.mockResolvedValue([
-        { url: 'https://huggingface.co/Xenova/opus-mt-zh-en/resolve/main/model.onnx' } as unknown as Request
+        {
+          url: 'https://huggingface.co/Xenova/opus-mt-fr-en/resolve/main/onnx/encoder_model_quantized.onnx'
+        } as unknown as Request,
+        {
+          url: 'https://huggingface.co/Xenova/opus-mt-fr-en/resolve/main/onnx/decoder_model_merged_quantized.onnx'
+        } as unknown as Request
       ])
-      const result = await areTranslateModelsCached('zh', 'ja')
+      const result = await areTranslateModelsCached('fr', 'zh')
       expect(result).toBe(false)
+    })
+
+    it('NLLB 相关语言对只需一个模型缓存即可', async () => {
+      mockCacheKeys.mockResolvedValue([
+        {
+          url: `https://huggingface.co/${EAST_ASIA_MODEL_ID}/resolve/main/onnx/encoder_model_quantized.onnx`
+        } as unknown as Request,
+        {
+          url: `https://huggingface.co/${EAST_ASIA_MODEL_ID}/resolve/main/onnx/decoder_model_merged_quantized.onnx`
+        } as unknown as Request
+      ])
+      const result = await areTranslateModelsCached('en', 'ko')
+      expect(result).toBe(true)
     })
   })
 
   describe('getAllTranslateModelStatus', () => {
     it('返回去重后的模型列表', async () => {
       const models = await getAllTranslateModelStatus()
-      /* 当前映射中的模型 ID 互不重复 */
-      const uniqueModels = new Set(Object.values(MODEL_MAP))
-      expect(models.length).toBe(uniqueModels.size)
+      expect(models.some((model) => model.modelId === EAST_ASIA_MODEL_ID)).toBe(true)
+      expect(models.length).toBe(new Set(models.map((model) => model.modelId)).size)
     })
 
-    it('每个模型都有 modelId、langPair、cached 字段', async () => {
+    it('每个模型都有 modelId、label、sizeHint、cached 字段', async () => {
       const models = await getAllTranslateModelStatus()
       for (const m of models) {
         expect(m).toHaveProperty('modelId')
-        expect(m).toHaveProperty('langPair')
+        expect(m).toHaveProperty('label')
+        expect(m).toHaveProperty('sizeHint')
         expect(m).toHaveProperty('cached')
       }
     })

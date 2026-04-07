@@ -1,11 +1,28 @@
 /**
  * 语言检测工具测试
- * 验证 tinyld 集成和语言代码映射
+ * 验证脚本特征、tinyld 集成和语言代码映射
  */
-import { describe, it, expect } from 'vitest'
-import { detectLanguage } from '@renderer/utils/language-detect'
+import { describe, expect, it } from 'vitest'
+import { detectLanguage } from '../../src/renderer/src/utils/language-detect'
 
 describe('detectLanguage', () => {
+  it('短英文词不会再误判成意大利语', () => {
+    expect(detectLanguage('hello')).toBe('en')
+    expect(detectLanguage('test')).toBe('en')
+  })
+
+  it('中文保持识别为中文', () => {
+    expect(detectLanguage('今天天气不错')).toBe('zh')
+  })
+
+  it('日文保持识别为日文', () => {
+    expect(detectLanguage('おはよう')).toBe('ja')
+  })
+
+  it('韩文重新纳入自动识别', () => {
+    expect(detectLanguage('안녕하세요')).toBe('ko')
+  })
+
   it('检测中文', () => {
     expect(detectLanguage('你好世界，今天天气不错')).toBe('zh')
   })

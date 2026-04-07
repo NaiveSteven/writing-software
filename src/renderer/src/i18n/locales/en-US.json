@@ -23,7 +23,7 @@
     "retranslate": "Re-translate",
     "copy": "Copy",
     "copied": "Copied",
-    "voiceModelReady": "Model ready! Click the mic button to start recording",
+    "voiceModelReady": "{{model}} is ready. Click the mic button again to record",
     "transcribing": "Transcribing...",
     "voiceListening": "Listening, go ahead...",
     "voiceStreaming": "Recognizing, keep talking..."
@@ -50,6 +50,7 @@
     "copied": "Copied!"
   },
   "language": {
+    "auto": "Auto",
     "zh": "Chinese",
     "en": "English",
     "ja": "Japanese",
@@ -103,8 +104,17 @@
     "notInstalled": "Not Installed",
     "install": "Install",
     "uninstall": "Uninstall",
+    "useNow": "Use Now",
+    "inUse": "In Use",
+    "translateModelEastAsia": "JA/KO enhanced multilingual model",
     "loading": "Checking model status...",
     "speechModelHint": "For voice input, converts speech to text",
-    "translateModelHint": "For translation, install per language pair"
+    "translateModelHint": "For translation, standard pairs stay small, JA/KO uses the enhanced model",
+    "speechTiny": "Whisper Tiny",
+    "speechBase": "Whisper Base",
+    "speechSmall": "Whisper Small",
+    "speechTinyHint": "Fastest, good for quick checks",
+    "speechBaseHint": "More balanced for daily use",
+    "speechSmallHint": "Best accuracy, but slower"
   }
 }

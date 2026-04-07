@@ -5,22 +5,28 @@ import { GlassInput } from '../../components/GlassInput'
 import { GlassButton } from '../../components/GlassButton'
 import { LanguageSelector } from '../../components/LanguageSelector'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
-import type { LanguageCode } from '../../types/language'
+import {
+  INPUT_SOURCE_LANGUAGE_OPTIONS,
+  type InputSourceLang,
+  type LanguageCode
+} from '../../types/language'
 
 /**
  * 分段识别时每段的最短音频时长（秒）
- * 太短的片段识别率低，跳过
+ * 适当降低门槛，让一句短语更早出现首个识别结果
  */
-const SEGMENT_MIN_DURATION_SEC = 1.5
+const SEGMENT_MIN_DURATION_SEC = 0.8
 /**
  * 分段识别检查间隔（毫秒）
- * 积累足够的新音频后才触发本段识别，避免频繁调用
+ * 1.2s 一次，兼顾首字响应和 CPU 开销
  */
-const SEGMENT_INTERVAL_MS = 2500
-/** 每段最大采样数：6 秒，超出后才触发分段
- * 保证每次推理在 ~3-5 秒内完成（base 模型）
+const SEGMENT_INTERVAL_MS = 1200
+/** 每段最大采样数：3 秒，降低单次推理耗时 */
+const SEGMENT_MAX_SAMPLES = 3 * 16000
+/**
+ * 有已有分段结果时，停止录音后改为后台全量精修，避免输入区长时间卡在不可交互状态
  */
-const SEGMENT_MAX_SAMPLES = 6 * 16000
+const USE_BACKGROUND_FINAL_REFINE = true
 /** 输入区最小高度 */
 const MIN_INPUT_HEIGHT = 130
 /** 输入区最大高度 */
@@ -37,8 +43,14 @@ function formatDuration(seconds: number): string {
 interface ChatInputProps {
   /** 发送文字消息 */
   onSendText: (text: string) => void
-  /** 最终转写回调：停止录音后传入全量音频 → 返回完整识别文字 */
-  onTranscribeVoice?: (audioData: Float32Array) => Promise<string | null>
+  /**
+   * 最终转写回调
+   * stopping 时可传 background=true，表示已有预览文字，仅做后台精修
+   */
+  onTranscribeVoice?: (
+    audioData: Float32Array,
+    options?: { background?: boolean }
+  ) => Promise<string | null>
   /**
    * 分段追加回调：录音期间每积累一段新音频时触发
    * @param newAudio  本段新增音频（不含已提交的旧音频）
@@ -59,15 +71,19 @@ interface ChatInputProps {
   onToggleTranslate: () => void
   /** 当前目标语言 */
   targetLang: LanguageCode
+  /** 当前输入源语言 */
+  sourceLang: InputSourceLang
   /** 变更目标语言 */
   onTargetLangChange: (lang: LanguageCode) => void
+  /** 变更输入源语言 */
+  onSourceLangChange: (lang: InputSourceLang) => void
 }
 
 /**
  * 聊天输入区域
  *
  * 语音分段追加架构：
- *  - 录音期间每积累 6s 新音频 或 每过 2.5s，转写新增片段
+ *  - 录音期间每积累 3s 新音频 或 每过 1.2s，转写新增片段
  *  - 结果追加到输入框（不替换），解决"覆盖"问题
  *  - 停止录音时触发完整音频的最终转写，覆盖所有中间结果
  *  - 分段游标 segmentCursorRef 记录"已提交的采样数"
@@ -83,7 +99,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   translateEnabled,
   onToggleTranslate,
   targetLang,
-  onTargetLangChange
+  sourceLang,
+  onTargetLangChange,
+  onSourceLangChange
 }) => {
   const { t } = useTranslation()
   const [text, setText] = useState('')
@@ -152,7 +170,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const newDuration = newSamples / 16000
       if (newDuration < SEGMENT_MIN_DURATION_SEC && newSamples < SEGMENT_MAX_SAMPLES) return
 
-      /* 取新增的 slice（最多 6 秒） */
+      /* 取新增的 slice（最多 3 秒） */
       const sliceStart = newSamples > SEGMENT_MAX_SAMPLES
         ? fullAudio.length - SEGMENT_MAX_SAMPLES
         : newStart
@@ -195,8 +213,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       const stopPromise = stopRecording()
 
       if (snapshot && onTranscribeVoice) {
-        const finalText = await onTranscribeVoice(snapshot.slice(0))
-        if (finalText) setText(finalText)
+        const hasPreviewText = textRef.current.trim().length > 0
+        if (hasPreviewText && USE_BACKGROUND_FINAL_REFINE) {
+          void onTranscribeVoice(snapshot.slice(0), { background: true }).then((finalText) => {
+            if (finalText) setText(finalText)
+          })
+        } else {
+          const finalText = await onTranscribeVoice(snapshot.slice(0))
+          if (finalText) setText(finalText)
+        }
       }
 
       /* 3. 重置游标，为下次录音做准备 */
@@ -267,6 +292,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
 
           {onTranscribeVoice && <div className={styles.toolDivider} />}
+
+          <LanguageSelector
+            value={sourceLang}
+            onChange={onSourceLangChange}
+            options={INPUT_SOURCE_LANGUAGE_OPTIONS}
+            className={styles.langSelectCompact}
+          />
+
+          <div className={styles.toolDivider} />
 
           {/* 翻译切换 + 语言选择 */}
           <div className={styles.translateGroup}>
