@@ -26,6 +26,7 @@ import {
   getTranslateModelMeta
 } from '../../services/translate'
 import { resolveLocalizedLabel } from '../../utils/localize-label'
+import { getShortcutLabels } from '../../utils/shortcut'
 import { typewriterReveal } from '../../utils/typewriter'
 import type { Message } from '../../types/message'
 import type { InputSourceLang, LanguageCode } from '../../types/language'
@@ -62,6 +63,7 @@ const DIALOG_INITIAL: DownloadDialogState = {
  */
 export const ChatPage: React.FC = () => {
   const { t, i18n } = useTranslation()
+  const shortcutLabels = getShortcutLabels()
 
   /* 状态管理 */
   const {
@@ -587,6 +589,12 @@ export const ChatPage: React.FC = () => {
             settingsTitle={t('settings.title')}
             themeTitle={t(theme === 'light' ? 'settings.themeDark' : 'settings.themeLight')}
             languageTitle={t('settings.language')}
+            shortcutHelp={{
+              title: t('chat.shortcutsHelpTitle'),
+              voiceLabel: t('chat.shortcutsVoiceLabel'),
+              voiceValue: shortcutLabels.voice,
+              buttonTitle: t('chat.shortcutsHelpButton')
+            }}
           />
         </div>
       </header>

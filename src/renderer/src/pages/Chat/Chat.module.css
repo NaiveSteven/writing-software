@@ -11,9 +11,12 @@
 
 /* --- 标题栏 --- */
 .titleBar {
+  position: relative;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  overflow: visible;
   padding: 12px 20px 8px 80px; /* 左侧留出 macOS 红绿灯空间 */
   flex-shrink: 0;
 }
@@ -26,9 +29,12 @@
 }
 
 .headerActions {
+  position: relative;
+  z-index: 41;
   display: flex;
   align-items: center;
   gap: 0;
+  overflow: visible;
 }
 
 /* --- 统一工具栏（麦克风 + 翻译 + 发送，单行排列） --- */
@@ -289,6 +295,7 @@
   font-size: 11px;
   color: var(--color-text-tertiary);
   margin-right: 4px;
+  white-space: nowrap;
 }
 
 .hintTranscribing {

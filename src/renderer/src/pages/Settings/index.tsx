@@ -22,6 +22,7 @@ import {
 import { useSettingStore } from '../../stores/setting-store'
 import { ModelDownloadDialog, type DialogPhase, type DialogAction } from '../../components/ModelDownloadDialog'
 import { resolveLocalizedLabel } from '../../utils/localize-label'
+import { isMacPlatform } from '../../utils/platform'
 
 /** 语音模型展示状态 */
 interface SpeechModelInfo extends WhisperModelStatusInfo {
@@ -66,7 +67,7 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const { speechModelId, setSpeechModelId } = useSettingStore()
 
   /** macOS：红绿灯在左侧，标题栏需要 80px 左缩进，返回按钮放右侧 */
-  const isMac = typeof navigator !== 'undefined' && navigator.platform.startsWith('Mac')
+  const isMac = isMacPlatform()
 
   /* 翻译模型列表 */
   const [translateModels, setTranslateModels] = useState<ModelInfo[]>([])

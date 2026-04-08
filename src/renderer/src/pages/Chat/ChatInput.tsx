@@ -6,6 +6,7 @@ import { GlassButton } from '../../components/GlassButton'
 import { LanguageSelector } from '../../components/LanguageSelector'
 import { useAudioRecorder } from '../../hooks/useAudioRecorder'
 import { useShortcuts } from '../../hooks/useShortcuts'
+import { getShortcutLabels } from '../../utils/shortcut'
 import {
   INPUT_SOURCE_LANGUAGE_OPTIONS,
   type InputSourceLang,
@@ -143,8 +144,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   })
 
   const canSend = Boolean(text.trim()) && !disabled && !isRecording
-  const isMac = navigator.platform.includes('Mac')
   const isExpanded = areaHeight !== null
+  const shortcutLabels = getShortcutLabels()
 
   return (
     <div
@@ -246,7 +247,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           ) : isRecording ? (
             <span className={styles.hintRecording}>{t('chat.voiceListening')}</span>
           ) : (
-            <span className={styles.hintShortcut}>{isMac ? '⌘↵' : 'Ctrl↵'}</span>
+            <span className={styles.hintShortcut}>
+              {t('chat.shortcutsSummary', { voice: shortcutLabels.voice })}
+            </span>
           )}
 
           {/* 发送按钮 */}

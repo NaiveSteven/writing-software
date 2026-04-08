@@ -53,6 +53,15 @@ const api = {
   downloadModel: (url: string, modelId: string) =>
     ipcRenderer.invoke('model:download', url, modelId),
 
+  /** 监听语音快捷键 */
+  onVoiceShortcut: (callback: () => void) => {
+    const listener = (): void => {
+      callback()
+    }
+    ipcRenderer.on('app:voice-shortcut', listener)
+    return () => ipcRenderer.removeListener('app:voice-shortcut', listener)
+  },
+
   /** 监听模型下载进度 */
   onDownloadProgress: (callback: (progress: DownloadProgress) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: DownloadProgress): void => {

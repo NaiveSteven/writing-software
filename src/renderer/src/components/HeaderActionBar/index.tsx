@@ -1,6 +1,14 @@
 import React from 'react'
 import styles from './HeaderActionBar.module.css'
 
+/** 快捷键提示内容。 */
+interface ShortcutHelpContent {
+  title: string
+  voiceLabel: string
+  voiceValue: string
+  buttonTitle: string
+}
+
 /** 顶部动作条属性 */
 interface HeaderActionBarProps {
   /** 当前主题 */
@@ -19,6 +27,19 @@ interface HeaderActionBarProps {
   themeTitle: string
   /** 语言按钮标题 */
   languageTitle: string
+  /** 快捷键提示 */
+  shortcutHelp: ShortcutHelpContent
+}
+
+/** 问号图标。 */
+function HelpIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.2a2.6 2.6 0 1 1 4.39 1.88c-.88.77-1.74 1.3-1.74 2.62" />
+      <circle cx="12" cy="16.9" r="0.7" fill="currentColor" stroke="none" />
+    </svg>
+  )
 }
 
 /** 设置图标 */
@@ -40,10 +61,34 @@ export const HeaderActionBar: React.FC<HeaderActionBarProps> = ({
   onToggleUiLang,
   settingsTitle,
   themeTitle,
-  languageTitle
+  languageTitle,
+  shortcutHelp
 }) => {
   return (
     <div className={styles.dock} role="toolbar" aria-label="window actions">
+      <div className={styles.helpWrap}>
+        <button
+          type="button"
+          className={styles.action}
+          title={shortcutHelp.buttonTitle}
+          aria-label={shortcutHelp.buttonTitle}
+        >
+          <span className={styles.icon} aria-hidden="true">
+            <HelpIcon />
+          </span>
+        </button>
+
+        <div className={styles.helpTooltip} role="tooltip">
+          <p className={styles.helpTitle}>{shortcutHelp.title}</p>
+          <div className={styles.helpRow}>
+            <span className={styles.helpLabel}>{shortcutHelp.voiceLabel}</span>
+            <span className={styles.helpValue}>{shortcutHelp.voiceValue}</span>
+          </div>
+        </div>
+      </div>
+
+      <span className={styles.divider} aria-hidden="true" />
+
       <button
         type="button"
         className={styles.action}

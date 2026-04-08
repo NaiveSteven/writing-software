@@ -4,6 +4,7 @@ import { existsSync, mkdirSync } from 'fs'
 import { is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc'
 import { DatabaseService } from './services/database'
+import { isVoiceShortcutInput, resolveShortcutPlatform } from '../shared/shortcut'
 
 /** 主窗口引用 */
 let mainWindow: BrowserWindow | null = null
@@ -25,6 +26,8 @@ function ensureStoragePaths(): void {
 
 /** 创建主窗口 */
 function createWindow(): void {
+  const shortcutPlatform = resolveShortcutPlatform(process.platform)
+
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 720,
@@ -53,6 +56,23 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  /* 在窗口层优先拦截语音快捷键，避免输入焦点吞掉事件。 */
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const isVoiceShortcut = input.type === 'keyDown' && isVoiceShortcutInput({
+      key: input.key,
+      metaKey: input.meta,
+      ctrlKey: input.control,
+      altKey: input.alt,
+      shiftKey: input.shift,
+      repeat: input.isAutoRepeat
+    }, shortcutPlatform)
+
+    if (!isVoiceShortcut) return
+
+    event.preventDefault()
+    mainWindow?.webContents.send('app:voice-shortcut')
   })
 
   /* 开发环境加载 dev server，生产环境加载打包文件 */
