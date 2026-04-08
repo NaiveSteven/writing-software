@@ -248,6 +248,12 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       setAction({ modelId, type: 'uninstall', progress: 0 })
       try {
         await deleteWhisperCache(modelId)
+        if (speechModelId === modelId) {
+          const nextModel = whisperModels.find((model) => model.modelId !== modelId && model.cached)
+          if (nextModel) {
+            setSpeechModelId(nextModel.modelId)
+          }
+        }
         await refreshModels()
         setDialog((d) => ({ ...d, phase: 'done' }))
         retryRef.current = null
@@ -260,7 +266,7 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
 
     scheduleDialogAction('uninstall', modelName, doUninstall)
-  }, [refreshModels, scheduleDialogAction, t])
+  }, [refreshModels, scheduleDialogAction, setSpeechModelId, speechModelId, t, whisperModels])
 
   /** 判断某模型是否正在操作中 */
   const isActioning = (modelId: string): boolean => action?.modelId === modelId
@@ -277,7 +283,12 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             onClick={onBack}
             title={t('settings.back')}
           >
-            ← {t('settings.back')}
+            <span className={styles.backIcon} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </span>
+            <span className={styles.backText}>{t('settings.back')}</span>
           </button>
         )}
 
@@ -292,7 +303,12 @@ export const SettingsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               onClick={onBack}
               title={t('settings.back')}
             >
-              {t('settings.back')}
+              <span className={styles.backIcon} aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </span>
+              <span className={styles.backText}>{t('settings.back')}</span>
             </button>
           </div>
         )}

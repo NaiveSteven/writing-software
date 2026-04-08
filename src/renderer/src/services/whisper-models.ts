@@ -18,7 +18,7 @@ export interface WhisperModelOption {
 }
 
 /** 默认语音识别模型 */
-export const DEFAULT_WHISPER_MODEL_ID: WhisperModelId = 'onnx-community/whisper-small'
+export const DEFAULT_WHISPER_MODEL_ID: WhisperModelId = 'onnx-community/whisper-base'
 
 /** 兼容旧调用方的默认模型常量 */
 export const WHISPER_MODEL_ID = DEFAULT_WHISPER_MODEL_ID

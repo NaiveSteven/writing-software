@@ -31,15 +31,28 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const { t } = useTranslation()
   const bottomRef = useRef<HTMLDivElement>(null)
+  const previousMessageCountRef = useRef(0)
+  const previousLastMessageIdRef = useRef<number | null>(null)
 
   /* 挂载时立即滚动到底部（返回聊天页场景） */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [])
 
-  /* 新消息到达时自动滚动到底部 */
+  /* 仅在末尾新增消息时滚动，重译 / 编辑不打断当前阅读位置。 */
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const nextLastMessage = messages[messages.length - 1]
+    const nextLastMessageId = nextLastMessage?.id ?? null
+    const appendedNewMessage =
+      messages.length > previousMessageCountRef.current &&
+      nextLastMessageId !== previousLastMessageIdRef.current
+
+    if (appendedNewMessage) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    previousMessageCountRef.current = messages.length
+    previousLastMessageIdRef.current = nextLastMessageId
   }, [messages])
 
   /* 空状态 */

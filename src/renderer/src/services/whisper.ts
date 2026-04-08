@@ -230,6 +230,9 @@ class WhisperWorkerClient {
 /** 全局单例 Worker 客户端 */
 const workerClient = new WhisperWorkerClient()
 
+/** 避免同一 Whisper 模型重复卸载。 */
+const pendingWhisperRemovals = new Map<WhisperModelId, Promise<void>>()
+
 /* ============================================================
    公开 API（与原 whisper.ts 保持相同签名，调用方无需改动）
    ============================================================ */
@@ -252,6 +255,11 @@ export async function initWhisper(
   onProgress?: ProgressCallback,
   modelId: WhisperModelId = DEFAULT_WHISPER_MODEL_ID
 ): Promise<void> {
+  const pendingRemoval = pendingWhisperRemovals.get(modelId)
+  if (pendingRemoval) {
+    await pendingRemoval
+  }
+
   await workerClient.load(modelId, onProgress)
 }
 
@@ -287,26 +295,38 @@ export async function isWhisperCached(modelId: WhisperModelId = DEFAULT_WHISPER_
 export async function deleteWhisperCache(
   modelId: WhisperModelId = DEFAULT_WHISPER_MODEL_ID
 ): Promise<void> {
-  if (workerClient.getLoadedModelId() === modelId) {
-    await workerClient.dispose()
+  const existingRemoval = pendingWhisperRemovals.get(modelId)
+  if (existingRemoval) {
+    return existingRemoval
   }
-  try {
-    const cacheNames = await caches.keys()
-    for (const name of cacheNames) {
-      const cache = await caches.open(name)
-      const keys = await cache.keys()
-      for (const req of keys) {
-        if (
-          req.url.includes(modelId.replace('/', '%2F')) ||
-          req.url.includes(modelId)
-        ) {
-          await cache.delete(req)
+
+  const removalTask = (async (): Promise<void> => {
+    if (workerClient.getLoadedModelId() === modelId) {
+      await workerClient.dispose()
+    }
+    try {
+      const cacheNames = await caches.keys()
+      for (const name of cacheNames) {
+        const cache = await caches.open(name)
+        const keys = await cache.keys()
+        for (const req of keys) {
+          if (
+            req.url.includes(modelId.replace('/', '%2F')) ||
+            req.url.includes(modelId)
+          ) {
+            await cache.delete(req)
+          }
         }
       }
+    } catch (err) {
+      console.warn('[WhisperService] Failed to delete cache:', err)
     }
-  } catch (err) {
-    console.warn('[WhisperService] Failed to delete cache:', err)
-  }
+  })().finally(() => {
+    pendingWhisperRemovals.delete(modelId)
+  })
+
+  pendingWhisperRemovals.set(modelId, removalTask)
+  return removalTask
 }
 
 /**

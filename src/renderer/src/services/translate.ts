@@ -54,6 +54,10 @@ let globalProgressCallback: TranslateProgressCallback | null = null
 /** Worker 内已加载模型的镜像状态 */
 const loadedModelIds = new Set<string>()
 
+/** 避免同一模型重复安装 / 卸载。 */
+const pendingTranslateDownloads = new Map<string, Promise<void>>()
+const pendingTranslateRemovals = new Map<string, Promise<void>>()
+
 /** 设置翻译模型加载进度回调 */
 export function setTranslateProgressCallback(cb: TranslateProgressCallback | null): void {
   globalProgressCallback = cb
@@ -267,22 +271,59 @@ async function clearModelCacheFiles(modelId: string): Promise<void> {
 
 /** 预下载指定模型 */
 export async function downloadModel(modelId: string): Promise<void> {
-  try {
-    await workerClient.loadModel(modelId, (currentModelId, status, progress) => {
-      globalProgressCallback?.({ status, modelId: currentModelId, progress })
-    })
-    loadedModelIds.add(modelId)
-  } catch (error) {
-    clearModelCacheFiles(modelId).catch(() => {})
-    throw error
+  const pendingRemoval = pendingTranslateRemovals.get(modelId)
+  if (pendingRemoval) {
+    await pendingRemoval
   }
+
+  const existingDownload = pendingTranslateDownloads.get(modelId)
+  if (existingDownload) {
+    return existingDownload
+  }
+
+  const downloadTask = (async (): Promise<void> => {
+    const cached = await isModelCached(modelId)
+    if (cached) return
+
+    try {
+      await workerClient.loadModel(modelId, (currentModelId, status, progress) => {
+        globalProgressCallback?.({ status, modelId: currentModelId, progress })
+      })
+      loadedModelIds.add(modelId)
+    } catch (error) {
+      clearModelCacheFiles(modelId).catch(() => {})
+      throw error
+    }
+  })().finally(() => {
+    pendingTranslateDownloads.delete(modelId)
+  })
+
+  pendingTranslateDownloads.set(modelId, downloadTask)
+  return downloadTask
 }
 
 /** 卸载指定模型并清除缓存 */
 export async function deleteModelCache(modelId: string): Promise<void> {
-  await workerClient.unloadModel(modelId)
-  loadedModelIds.delete(modelId)
-  await clearModelCacheFiles(modelId)
+  const existingRemoval = pendingTranslateRemovals.get(modelId)
+  if (existingRemoval) {
+    return existingRemoval
+  }
+
+  const removalTask = (async (): Promise<void> => {
+    const pendingDownload = pendingTranslateDownloads.get(modelId)
+    if (pendingDownload) {
+      await pendingDownload.catch(() => undefined)
+    }
+
+    await workerClient.unloadModel(modelId)
+    loadedModelIds.delete(modelId)
+    await clearModelCacheFiles(modelId)
+  })().finally(() => {
+    pendingTranslateRemovals.delete(modelId)
+  })
+
+  pendingTranslateRemovals.set(modelId, removalTask)
+  return removalTask
 }
 
 /** 使用单个模型执行翻译 */

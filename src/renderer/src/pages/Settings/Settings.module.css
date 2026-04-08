@@ -39,26 +39,94 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
 }
 
 .backBtn {
-  padding: 4px 14px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px) saturate(1.4);
-  -webkit-backdrop-filter: blur(12px) saturate(1.4);
-  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 14px 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--glass-border) 92%, transparent);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.08)),
+    color-mix(in srgb, var(--glass-bg) 96%, transparent);
+  backdrop-filter: blur(22px) saturate(1.65);
+  -webkit-backdrop-filter: blur(22px) saturate(1.65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04),
+    0 14px 34px rgba(17, 24, 39, 0.12);
+  color: var(--color-text-on-bg);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    color var(--transition-fast);
   -webkit-app-region: no-drag;
 }
 
 .backBtn:hover {
-  background: var(--glass-bg-hover);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.12)),
+    color-mix(in srgb, var(--glass-bg-hover) 88%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04),
+    0 18px 36px rgba(17, 24, 39, 0.14);
+  transform: translateY(-0.5px);
+}
+
+.backBtn:active {
+  transform: translateY(0);
+}
+
+.backIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--glass-bg-hover) 86%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.backIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.backText {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+:global([data-theme='dark']) .backBtn {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
+    rgba(18, 25, 36, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 18px 34px rgba(0, 0, 0, 0.28);
+}
+
+:global([data-theme='dark']) .backBtn:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)),
+    rgba(24, 33, 47, 0.8);
+}
+
+:global([data-theme='dark']) .backIcon {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* --- 内容区域 --- */
@@ -239,4 +307,16 @@
   color: var(--color-text-tertiary);
   font-size: 12px;
   padding: 16px 0;
+}
+
+@media (max-width: 640px) {
+  .backBtn {
+    min-height: 32px;
+    padding: 4px 12px 4px 7px;
+  }
+
+  .backIcon {
+    width: 20px;
+    height: 20px;
+  }
 }

@@ -435,6 +435,9 @@ export const ChatPage: React.FC = () => {
       const msg = messages.find((m) => m.id === id)
       if (!msg) return
 
+      /* 消息重译与底部目标语言保持一致，避免用户再次选择同一语言。 */
+      setTargetLang(newTargetLang)
+
       /* 先检查模型 */
       const ready = await ensureTranslateModels(msg.sourceLang, newTargetLang)
       if (!ready) return
@@ -450,43 +453,24 @@ export const ChatPage: React.FC = () => {
         markTranslating(id, false)
       }
     },
-    [messages, updateTranslation, t, ensureTranslateModels, markTranslating]
+    [messages, updateTranslation, t, ensureTranslateModels, markTranslating, setTargetLang]
   )
 
   /**
-   * 翻译开关：开启时校验双向翻译模型 (en↔target)
-   * 对话翻译需要双向模型才能工作
+   * 翻译开关只切换状态。
+   * 模型改为在实际翻译时按需安装，避免因预检查造成重复提示。
    */
   const handleToggleTranslate = useCallback(async (): Promise<void> => {
-    if (translateEnabled) {
-      /* 关闭翻译，无需校验 */
-      toggleTranslate()
-      return
-    }
-    /* 开启翻译，必须检查双向模型：en→target 和 target→en */
-    const readyForward = await ensureTranslateModels('en', targetLang)
-    if (!readyForward) return
-    const readyReverse = await ensureTranslateModels(targetLang, 'en')
-    if (!readyReverse) return
     toggleTranslate()
-  }, [translateEnabled, targetLang, toggleTranslate, ensureTranslateModels])
+  }, [toggleTranslate])
 
   /**
-   * 目标语言切换：翻译开启时校验新语言双向模型
+   * 目标语言切换仅更新选择。
+   * 具体模型在真正发送 / 重译时再检查，减少跨入口重复安装提示。
    */
   const handleTargetLangChange = useCallback(async (lang: LanguageCode): Promise<void> => {
-    if (!translateEnabled) {
-      /* 翻译未开启，直接切换 */
-      setTargetLang(lang)
-      return
-    }
-    /* 翻译已开启，校验双向模型 */
-    const readyForward = await ensureTranslateModels('en', lang)
-    if (!readyForward) return
-    const readyReverse = await ensureTranslateModels(lang, 'en')
-    if (!readyReverse) return
     setTargetLang(lang)
-  }, [translateEnabled, setTargetLang, ensureTranslateModels])
+  }, [setTargetLang])
 
   /** 切换界面语言 */
   const toggleUiLang = (): void => {
