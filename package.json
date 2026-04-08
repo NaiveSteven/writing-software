@@ -1,7 +1,7 @@
 {
   "name": "writing-software",
   "version": "1.0.0",
-  "productName": "Aura Marker Studio",
+  "productName": "Writing Software",
   "description": "Real-time conversation translation desktop app",
   "main": "./out/main/index.js",
   "scripts": {
