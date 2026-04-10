@@ -10,7 +10,7 @@
 
 </div>
 
-<img src="./product.webp" width="600" />
+<img src="./product.webp" />
 
 ---
 
