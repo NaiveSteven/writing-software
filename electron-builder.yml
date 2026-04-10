@@ -1,5 +1,5 @@
 appId: com.auramarker.studio
-productName: Aura Marker Studio
+productName: Transformer
 compression: normal
 asar: true
 npmRebuild: false
